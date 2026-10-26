@@ -4,6 +4,7 @@ import { positionKey } from '../chess/fen';
 import type { ParsedFile, ParsedGame } from '../pgn/types';
 import { buildForest, detectColor } from './merged';
 import type { GameRecord, Repertoire, RepertoireStats, SourceInfo } from './types';
+import { marksFromGames } from './export';
 
 export function newId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -87,7 +88,8 @@ export function repertoireFromParsed(parsed: ParsedFile, opts: { name: string; s
     createdAt: now,
     updatedAt: now,
     stats: computeStats(games),
-    marks: {},
+    // Marques personnelles éventuellement présentes dans un PGN exporté par l'application.
+    marks: marksFromGames(games),
     modified: false,
     gameOrder: games.map((g) => g.id),
   };
