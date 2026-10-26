@@ -5,6 +5,7 @@ import { buildPositionIndex, type PositionIndex } from '../repertoire/positions'
 import { resolveSelection, type RepertoireSelection, type ResolvedSelection } from '../repertoire/selection';
 import { repertoireColor, type GameRecord, type Repertoire } from '../repertoire/types';
 import { gameLabelFromHeaders } from '../pgn/parse';
+import { orderedGames } from '../repertoire/build';
 
 /** Données dérivées d'un répertoire pour une session (non persistées). */
 export interface RepContext {
@@ -26,7 +27,9 @@ export interface SessionContext {
   reps: Map<string, RepContext>;
 }
 
-export function buildRepContext(repertoire: Repertoire, games: GameRecord[], selection: RepertoireSelection): RepContext {
+export function buildRepContext(repertoire: Repertoire, unordered: GameRecord[], selection: RepertoireSelection): RepContext {
+  // L'ordre des chapitres détermine l'ordre des variantes à égalité.
+  const games = orderedGames(repertoire, unordered);
   const forest = buildForest(games);
   const resolved = resolveSelection(forest, selection, repertoire.marks);
   const index = buildPositionIndex(forest, resolved);

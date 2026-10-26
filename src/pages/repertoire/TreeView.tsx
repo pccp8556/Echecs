@@ -4,7 +4,7 @@ import type { MergedForest, MergedNode } from '../../core/repertoire/merged';
 import { mergedPath } from '../../core/repertoire/merged';
 import { checkState, type ResolvedSelection } from '../../core/repertoire/selection';
 import { LINE_MARKS, type LineMark } from '../../core/repertoire/types';
-import { formatSan, nagText, type NotationStyle } from '../../core/chess/notation';
+import { formatLine, formatSan, nagText, type NotationStyle } from '../../core/chess/notation';
 import { sideToMove, type Color } from '../../core/chess/fen';
 import { cardId, masteryOf, MASTERY_LABELS, type MasteryLevel, type ReviewCard } from '../../core/srs/srs';
 import { Menu } from '../../ui/kit';
@@ -94,10 +94,12 @@ const Row = memo(function Row({ head, ctx, depth, expanded, toggleExpand }: { he
   const mastery = segmentMastery(seg, ctx);
   const leaves = ctx.leaves.get(head.key) ?? 1;
   const hasComment = seg.some((n) => n.comments.length > 0);
-  const label = seg
-    .slice(0, 3)
-    .map((n) => formatSan(n.san, ctx.notation))
-    .join(' ');
+  // Libellé accessible avec numéros de coups : « 6...g6 7.e5 ».
+  const label = formatLine(
+    seg.slice(0, 3).map((n) => n.san),
+    parent?.fen ?? head.fen,
+    ctx.notation,
+  );
   return (
     <li className="tree-item" role="treeitem" aria-expanded={hasKids ? isOpen : undefined} aria-selected={state !== 'unchecked'}>
       <div className={`tree-row ${seg.some((n) => n.key === ctx.current) ? 'has-current' : ''}`} style={{ paddingLeft: 6 + depth * 18 }}>

@@ -179,7 +179,12 @@ export function buildQueue(config: SessionConfig, deps: EngineDeps, now: number,
   if (config.mode === 'smart') {
     const due = list.filter((c) => c.card && isDue(c.card, now)).sort((a, b) => b.score - a.score);
     const later = list.filter((c) => c.card && !isDue(c.card, now) && c.card.reviewLater).sort((a, b) => b.score - a.score);
-    const fresh = list.filter((c) => isNew(c.card)).sort((a, b) => a.ply - b.ply || a.order - b.order).slice(0, Math.max(0, config.newLimit));
+    // Nouvelles positions : d'abord l'arbre principal (depuis la position initiale), du tronc vers les feuilles.
+    const isStd = (c: Candidate) => c.contextKey.startsWith('start|');
+    const fresh = list
+      .filter((c) => isNew(c.card))
+      .sort((a, b) => Number(isStd(b)) - Number(isStd(a)) || a.ply - b.ply || a.order - b.order)
+      .slice(0, Math.max(0, config.newLimit));
     list = [...due, ...later, ...fresh];
   } else if (config.mode === 'critical') {
     list = list

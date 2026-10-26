@@ -572,6 +572,13 @@ blockquote cite {
   padding: 16px 20px;
 }
 
+@media (max-width: 700px) {
+  .mastery-card .row-between {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .position-card {
   display: flex;
   flex-direction: column;
@@ -1625,14 +1632,8 @@ blockquote cite {
 }
 
 .chart-tools {
-  position: absolute;
-  top: -48px;
-  right: 0;
-}
-
-.card-header + .chart .chart-tools,
-.chart .chart-tools {
-  top: -46px;
+  justify-content: flex-end;
+  margin: -8px 0 2px;
 }
 
 .chart-legend {
@@ -1644,9 +1645,8 @@ blockquote cite {
 }
 
 .chart-svg {
-  width: 100%;
-  height: auto;
   display: block;
+  max-width: 100%;
 }
 
 .chart-grid {

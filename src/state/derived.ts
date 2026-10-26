@@ -6,6 +6,7 @@ import { cardId, isDue, masteryOf, MASTERY_SCORE, type MasteryLevel, type Review
 import type { Line } from '../core/repertoire/lines';
 import { sideToMove, type Color } from '../core/chess/fen';
 import { useLibrary } from './library';
+import { orderedGames } from '../core/repertoire/build';
 
 interface Derived {
   forest: MergedForest;
@@ -16,10 +17,10 @@ interface Derived {
 const cache = new Map<string, { stamp: string; value: Derived }>();
 
 export function derive(rep: Repertoire, games: GameRecord[]): Derived {
-  const stamp = `${rep.updatedAt}|${games.length}|${games.reduce((s, g) => s + g.updatedAt, 0)}`;
+  const stamp = `${rep.updatedAt}|${rep.gameOrder.join(',')}|${games.length}|${games.reduce((s, g) => s + g.updatedAt, 0)}`;
   const hit = cache.get(rep.id);
   if (hit && hit.stamp === stamp) return hit.value;
-  const forest = buildForest(games);
+  const forest = buildForest(orderedGames(rep, games));
   const value = { forest, index: buildPositionIndex(forest), trunk: commonTrunk(forest) };
   cache.set(rep.id, { stamp, value });
   return value;

@@ -3,7 +3,7 @@ import type { Folder, GameRecord, LineMark, Repertoire } from '../core/repertoir
 import type { ReviewCard } from '../core/srs/srs';
 import * as repo from '../storage/repo';
 import { requestPersistence } from '../storage/db';
-import { newId } from '../core/repertoire/build';
+import { newId, orderedGames } from '../core/repertoire/build';
 
 interface LibraryStore {
   loaded: boolean;
@@ -59,7 +59,9 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
   loadGames: async (repertoireId, force) => {
     const cached = get().games[repertoireId];
     if (cached && !force) return cached;
-    const games = await repo.getGames(repertoireId);
+    const rep = get().repertoires.find((r) => r.id === repertoireId);
+    const raw = await repo.getGames(repertoireId);
+    const games = rep ? orderedGames(rep, raw) : raw;
     set({ games: { ...get().games, [repertoireId]: games } });
     return games;
   },

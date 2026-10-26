@@ -19,7 +19,7 @@ import { EmptyState, Loading, MasteryBar, formatDuration, formatRelative, pct, t
 import { StackedColumns } from '../ui/charts';
 import { MiniBoard, PageHeader, greeting, startSessionAndGo, useLogs } from './common';
 import { importDemo } from './importHelpers';
-import { MASTERY_LABELS } from '../core/srs/srs';
+import { MASTERY_LABELS, masteryOf } from '../core/srs/srs';
 
 const DAY = 86400000;
 
@@ -41,21 +41,28 @@ export default function Dashboard() {
   const summaries = useMemo(() => {
     return repertoires.map((rep) => {
       const g = games[rep.id];
-      if (!g) return { rep, mastery: undefined, fragile: [] as Array<{ name: string; score: number; level: string; key: string }> };
+      if (!g) return { rep, mastery: undefined, fragile: [] as Array<{ name: string; score: number; level: string; key: string; weak: number }> };
       const d = derive(rep, g);
       const positions = userPositionKeys(rep, g, d.forest);
       const mastery = masterySummary(rep.id, positions, cards, now);
       const res = resolveSelection(d.forest, fullSelection(rep.id), rep.marks);
       const lines = enumerateLines(d.forest, res, rep.id);
       const labels = new Map(g.map((x, i) => [x.id, x.headers.find(([k]) => k === 'ChapterName')?.[1] ?? x.headers.find(([k]) => k === 'Event')?.[1] ?? `Partie ${i + 1}`]));
+      // Lignes contenant au moins une position fragile (erreur, solution vue, oubli).
       const fragile = lines
         .map((l) => {
+          let weak = 0;
+          for (const st of l.steps) {
+            if (st.turn !== repertoireColor(rep)) continue;
+            const c = cards.get(`${rep.id}|${st.posKeyBefore}`);
+            if (c && masteryOf(c, now) === 'fragile') weak++;
+          }
           const m = lineMastery(l, repertoireColor(rep), cards, now);
           const tail = l.steps.slice(-3).map((s) => formatSan(s.san, settings.notation)).join(' ');
-          return { key: l.key, name: `${labels.get(l.gameIds[0]) ?? rep.name} · …${tail}`, score: m.score, level: m.level, touched: l.steps.some((s) => cards.has(`${rep.id}|${s.posKeyBefore}`)) };
+          return { key: l.key, name: `${labels.get(l.gameIds[0]) ?? rep.name} · …${tail}`, score: m.score, level: weak ? 'fragile' : m.level, weak };
         })
-        .filter((x) => x.touched)
-        .sort((a, b) => a.score - b.score)
+        .filter((x) => x.weak > 0)
+        .sort((a, b) => b.weak - a.weak || a.score - b.score)
         .slice(0, 5);
       return { rep, mastery, fragile };
     });
@@ -78,7 +85,7 @@ export default function Dashboard() {
   const thinking = useMemo(() => (logs ? totalThinkingMs(logs) : 0), [logs]);
   const avg = useMemo(() => (logs ? averageTimeMs(logs) : null), [logs]);
   const recentErrors = useMemo(() => (logs ? logs.filter((l) => l.result === 'error').sort((a, b) => b.ts - a.ts).slice(0, 5) : []), [logs]);
-  const fragile = useMemo(() => summaries.flatMap((s) => s.fragile.map((f) => ({ ...f, rep: s.rep }))).sort((a, b) => a.score - b.score).slice(0, 5), [summaries]);
+  const fragile = useMemo(() => summaries.flatMap((s) => s.fragile.map((f) => ({ ...f, rep: s.rep }))).sort((a, b) => b.weak - a.weak || a.score - b.score).slice(0, 5), [summaries]);
 
   if (!loaded) return <Loading />;
   if (error)
@@ -244,7 +251,7 @@ export default function Dashboard() {
             <Clock /> Temps de réflexion (30 j)
           </span>
           <span className="kpi-value">{formatDuration(thinking)}</span>
-          <span className="kpi-sub">{avg ? `${(avg / 1000).toFixed(1)} s par bonne réponse` : 'Aucune réponse enregistrée'}</span>
+          <span className="kpi-sub">{avg ? `${(avg / 1000).toFixed(1)} s par bonne réponse` : logs?.length ? 'Pas encore de bonne réponse chronométrée' : 'Aucune réponse enregistrée'}</span>
         </div>
       </section>
 
@@ -291,7 +298,7 @@ export default function Dashboard() {
                       {f.name}
                     </div>
                     <div className="small muted">
-                      {f.rep.name} · {MASTERY_LABELS[f.level as keyof typeof MASTERY_LABELS]}
+                      {f.rep.name} · {f.weak} position{f.weak > 1 ? 's' : ''} fragile{f.weak > 1 ? 's' : ''} · {MASTERY_LABELS[f.level as keyof typeof MASTERY_LABELS]}
                     </div>
                   </div>
                   <div className="progress" style={{ width: 90 }} aria-label={`Maîtrise ${Math.round(f.score * 100)} %`}>
@@ -312,8 +319,8 @@ export default function Dashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState icon={<Target />} title="Pas encore de données">
-              Les lignes fragiles apparaîtront ici après tes premières révisions.
+            <EmptyState icon={<Target />} title="Aucune variante fragile">
+              Les lignes où tu t’es trompé ou as vu la solution apparaîtront ici.
             </EmptyState>
           )}
         </div>

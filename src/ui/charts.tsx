@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Table2, BarChart3 } from 'lucide-react';
 
 /* Graphiques SVG légers : barres fines arrondies côté données, grille en filet,
@@ -14,6 +14,20 @@ export interface StackedDatum {
   label: string;
   sublabel?: string;
   values: Record<string, number>;
+}
+
+/** Largeur réelle du conteneur : le SVG est dessiné au pixel près, le texte garde sa taille. */
+function useWidth(fallback = 640) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(fallback);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(220, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, w };
 }
 
 function niceMax(v: number): number {
@@ -46,7 +60,7 @@ function ChartFrame({ title, children, table, empty }: { title: string; children
   const [asTable, setAsTable] = useState(false);
   return (
     <div className="chart">
-      <div className="chart-tools">
+      <div className="chart-tools row">
         <button className="btn btn-ghost btn-sm" onClick={() => setAsTable((t) => !t)} aria-pressed={asTable} aria-label={asTable ? `Afficher le graphique : ${title}` : `Afficher le tableau : ${title}`}>
           {asTable ? <BarChart3 /> : <Table2 />}
           {asTable ? 'Graphique' : 'Tableau'}
@@ -60,9 +74,10 @@ function ChartFrame({ title, children, table, empty }: { title: string; children
 /** Colonnes empilées (ex. réussites / erreurs par jour). */
 export function StackedColumns({ data, series, title, height = 180, emptyHint }: { data: StackedDatum[]; series: Series[]; title: string; height?: number; emptyHint?: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
+  const { ref, w } = useWidth();
   const totals = data.map((d) => series.reduce((s, x) => s + (d.values[x.key] ?? 0), 0));
   const max = niceMax(Math.max(1, ...totals));
-  const W = 640;
+  const W = w;
   const H = height;
   const padL = 30;
   const padB = 24;
@@ -72,7 +87,7 @@ export function StackedColumns({ data, series, title, height = 180, emptyHint }:
   const band = innerW / Math.max(1, data.length);
   const barW = Math.min(24, band * 0.62);
   const ticks = [0, max / 2, max];
-  const labelEvery = Math.ceil(data.length / 10);
+  const labelEvery = Math.ceil(data.length / Math.max(3, Math.floor(innerW / 44)));
   const empty = totals.every((t) => t === 0);
   return (
     <ChartFrame
@@ -106,8 +121,8 @@ export function StackedColumns({ data, series, title, height = 180, emptyHint }:
       }
     >
       <Legend series={series} />
-      <div className="chart-svg-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" role="img" aria-label={title} onMouseLeave={() => setHover(null)}>
+      <div className="chart-svg-wrap" ref={ref}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="chart-svg" role="img" aria-label={title} onMouseLeave={() => setHover(null)}>
           {ticks.map((t) => {
             const y = padT + innerH - (t / max) * innerH;
             return (
