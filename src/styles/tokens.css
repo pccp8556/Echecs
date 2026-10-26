@@ -1,0 +1,119 @@
+/* Jetons de design — thème sombre par défaut (anthracite / bleu nuit, accents émeraude). */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0f14;
+  --bg-glow: radial-gradient(1200px 600px at 85% -10%, rgba(47, 213, 168, 0.09), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(76, 140, 240, 0.07), transparent 60%);
+  --surface: #111a23;
+  --surface-2: #16212c;
+  --surface-3: #1c2936;
+  --surface-hover: #1f2d3b;
+  --overlay: rgba(4, 8, 12, 0.72);
+  --border: rgba(148, 178, 204, 0.11);
+  --border-strong: rgba(148, 178, 204, 0.22);
+  --text: #e8eef4;
+  --text-muted: #9cadbb;
+  --text-faint: #6f8291;
+  --accent: #34d8ab;
+  --accent-strong: #1fbf92;
+  --accent-ink: #04241b;
+  --accent-soft: rgba(52, 216, 171, 0.13);
+  --accent-softer: rgba(52, 216, 171, 0.07);
+  --teal: #3cc6d4;
+  --gold: #e9c46a;
+  --gold-soft: rgba(233, 196, 106, 0.14);
+  --danger: #ff6f6f;
+  --danger-soft: rgba(255, 111, 111, 0.13);
+  --warning: #f4b740;
+  --warning-soft: rgba(244, 183, 64, 0.13);
+  --info: #72a9ff;
+  --info-soft: rgba(114, 169, 255, 0.13);
+  --violet: #b59cff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+  --ring: 0 0 0 3px rgba(52, 216, 171, 0.35);
+  /* Palette des graphiques validée (bande de luminance sombre, CVD avec encodage secondaire). */
+  --chart-1: #13a57e;
+  --chart-2: #e8645a;
+  --chart-3: #4f8ff0;
+  --chart-4: #b8892a;
+  --chart-5: #9a7cf2;
+  --chart-grid: rgba(148, 178, 204, 0.1);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f2f5f4;
+  --bg-glow: radial-gradient(1200px 600px at 85% -10%, rgba(14, 159, 122, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(60, 110, 200, 0.06), transparent 60%);
+  --surface: #ffffff;
+  --surface-2: #f6f9f8;
+  --surface-3: #ebf1ef;
+  --surface-hover: #e6eeeb;
+  --overlay: rgba(20, 30, 35, 0.45);
+  --border: rgba(16, 42, 38, 0.1);
+  --border-strong: rgba(16, 42, 38, 0.2);
+  --text: #0f1b20;
+  --text-muted: #4b5e66;
+  --text-faint: #75878f;
+  --accent: #0c9c77;
+  --accent-strong: #08835f;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(12, 156, 119, 0.12);
+  --accent-softer: rgba(12, 156, 119, 0.06);
+  --teal: #0f8fa0;
+  --gold: #b07d12;
+  --gold-soft: rgba(176, 125, 18, 0.12);
+  --danger: #d43c3c;
+  --danger-soft: rgba(212, 60, 60, 0.1);
+  --warning: #b77904;
+  --warning-soft: rgba(183, 121, 4, 0.12);
+  --info: #2f6fd6;
+  --info-soft: rgba(47, 111, 214, 0.1);
+  --violet: #6d4fd8;
+  --shadow-sm: 0 1px 2px rgba(15, 30, 30, 0.08);
+  --shadow: 0 12px 30px -14px rgba(15, 40, 40, 0.25), 0 2px 6px rgba(15, 40, 40, 0.06);
+  --shadow-lg: 0 30px 70px -24px rgba(15, 40, 40, 0.35);
+  --ring: 0 0 0 3px rgba(12, 156, 119, 0.3);
+  --chart-1: #0c9c77;
+  --chart-2: #e0625a;
+  --chart-3: #2f6fd6;
+  --chart-4: #c08a16;
+  --chart-5: #7457e0;
+  --chart-grid: rgba(16, 42, 38, 0.09);
+}
+
+:root {
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Manrope Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-scale: 1;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --sidebar-w: 248px;
+  --topbar-h: 60px;
+  --tabbar-h: 66px;
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 360ms;
+  --board-max: 640px;
+}
+
+:root[data-motion='off'] {
+  --dur-fast: 0ms;
+  --dur: 0ms;
+  --dur-slow: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

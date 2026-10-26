@@ -18,5 +18,5 @@ android/app/src/main/assets/public/
 android/capacitor-cordova-android-plugins/build/
 *.keystore
 *.jks
-# Stockfish copié depuis node_modules au build
-public/stockfish/
+
+

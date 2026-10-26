@@ -1,0 +1,288 @@
+.board-wrap {
+  width: 100%;
+  position: relative;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  container-type: inline-size;
+  outline: none;
+}
+
+.board:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent), 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+}
+
+.board.is-shaking {
+  animation: shake 0.42s var(--ease);
+}
+
+.board-squares {
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(var(--sq-dark) 0 25%, var(--sq-light) 0 50%) 0 0 / 25% 25%;
+}
+
+.board-layer,
+.board-pieces,
+.board-coords {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hl,
+.piece,
+.square-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  height: 12.5%;
+}
+
+.hl-last {
+  background: rgba(240, 210, 90, 0.42);
+}
+
+.hl-selected {
+  background: rgba(52, 216, 171, 0.5);
+}
+
+.hl-check {
+  background: radial-gradient(circle, rgba(255, 60, 60, 0.95) 0%, rgba(255, 60, 60, 0.55) 30%, rgba(255, 60, 60, 0) 72%);
+}
+
+.hl-hint {
+  box-shadow: inset 0 0 0 4px rgba(52, 216, 171, 0.9);
+  background: rgba(52, 216, 171, 0.18);
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.hl-cursor {
+  box-shadow: inset 0 0 0 3px var(--info);
+}
+
+.hl-heat {
+  background: #ff4d4d;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme='dark'] .hl-heat,
+:root:not([data-theme]) .hl-heat {
+  mix-blend-mode: normal;
+}
+
+.hl-dest::after {
+  content: '';
+  position: absolute;
+  inset: 37%;
+  border-radius: 50%;
+  background: rgba(10, 30, 25, 0.32);
+}
+
+.hl-dest-soft::after {
+  background: rgba(10, 30, 25, 0.22);
+}
+
+.hl-capture {
+  background: radial-gradient(transparent 0 58%, rgba(10, 30, 25, 0.3) 59%);
+}
+
+.board-coords i {
+  position: absolute;
+  font-style: normal;
+  font-weight: 750;
+  font-size: max(9px, 2.3cqi);
+  line-height: 1;
+  font-family: var(--font-ui);
+}
+
+.board-coords .coord-file {
+  bottom: 0.45cqi;
+  width: 12.5%;
+  text-align: right;
+  padding-right: 0.6cqi;
+}
+
+.board-coords .coord-rank {
+  left: 0.6cqi;
+  padding-top: 0.5cqi;
+}
+
+.board-coords .on-light {
+  color: var(--coord-light);
+}
+
+.board-coords .on-dark {
+  color: var(--coord-dark);
+}
+
+.piece {
+  will-change: transform;
+}
+
+.board.is-animated .piece {
+  transition: transform var(--dur) var(--ease);
+}
+
+.piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1.5px 1px rgba(0, 0, 0, 0.25));
+}
+
+.board.is-interactive .piece.is-movable {
+  cursor: grab;
+}
+
+.piece.is-ghosted {
+  opacity: 0.3;
+}
+
+.piece-drag {
+  z-index: 5;
+  pointer-events: none;
+  transition: none !important;
+  cursor: grabbing;
+}
+
+.piece-drag svg {
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.45));
+}
+
+.board-shapes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.square-mark {
+  z-index: 4;
+  pointer-events: none;
+}
+
+.square-mark span {
+  position: absolute;
+  top: 4%;
+  right: 4%;
+  display: grid;
+  place-items: center;
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
+  font-size: max(10px, 2.6cqi);
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  animation: pop-in 0.25s var(--ease);
+}
+
+.mark-correct span {
+  background: #1fbf7a;
+}
+
+.mark-wrong span {
+  background: #e5484d;
+}
+
+.mark-info span {
+  background: #3b82f6;
+}
+
+.promotion {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 10, 14, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.promotion-card {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  width: min(80%, 360px);
+  animation: pop-in var(--dur) var(--ease);
+}
+
+.promotion-card button {
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.promotion-card button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.promotion-card button svg {
+  width: 100%;
+  height: 100%;
+}
+
+.promotion-card .promotion-cancel {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  padding: 8px;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+/* Barre d'évaluation (Stockfish) */
+.eval-bar {
+  position: relative;
+  width: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #262b30;
+  flex: none;
+  align-self: stretch;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.eval-bar > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f1efe9;
+  transition: height var(--dur-slow) var(--ease);
+}
+
+.eval-bar.flipped > span {
+  top: 0;
+  bottom: auto;
+}
+
+.eval-bar small {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 800;
+  z-index: 1;
+}

@@ -4,7 +4,19 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Application de révision d'ouvertures d'échecs à partir de ses propres fichiers PGN",
-  "scripts": {},
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "audit:pgn": "tsx scripts/audit-pgn.ts",
+    "icons": "node scripts/generate-icons.mjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
+  },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
