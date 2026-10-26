@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, createMemoryRouter, RouterProvider } from 'react-router';
+import { IS_ARTIFACT_PREVIEW } from './config';
 import '@fontsource-variable/fraunces/opsz.css';
 import '@fontsource-variable/fraunces/opsz-italic.css';
 import '@fontsource-variable/manrope';
@@ -31,7 +32,7 @@ applySettings(useSettings.getState().settings);
 
 const wrap = (el: React.ReactNode) => <Suspense fallback={<Loading />}>{el}</Suspense>;
 
-const router = createBrowserRouter([
+const routes = [
   {
     path: '/',
     element: <App />,
@@ -49,7 +50,10 @@ const router = createBrowserRouter([
       { path: '*', element: <NotFound /> },
     ],
   },
-]);
+];
+
+// Dans la préversion claude.ai, l'adresse de la page ne peut pas porter les routes : routeur en mémoire.
+const router = IS_ARTIFACT_PREVIEW ? createMemoryRouter(routes) : createBrowserRouter(routes);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

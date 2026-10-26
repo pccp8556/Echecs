@@ -31,6 +31,7 @@ Puis : **Importer un PGN** → glisse ton fichier → **Importer** → **Révise
 | `npm run audit:pgn` | audit des fichiers `.pgn` du dépôt (lecture, encodage, légalité des coups) |
 | `npm run icons` | régénère les icônes PWA/Android depuis `public/icon.svg` |
 | `npm run android:apk` | build web + synchronisation Capacitor + APK de débogage |
+| `npm run build:artifact` | build de la préversion claude.ai dans `dist-artifact/` (chemins relatifs, sans service worker) |
 
 ---
 
@@ -82,6 +83,8 @@ Le dépôt contient `netlify.toml` (build `npm run build`, publication `dist/`, 
 **Variables d’environnement** (toutes publiques, aucune n’est un secret) :
 - `VITE_DEFAULT_GITHUB_REPO` : dépôt proposé par défaut dans l’import GitHub (`pccp8556/Echecs`).
 - `VITE_APP_VERSION` : numéro de version affiché (facultatif).
+
+**Préversion actuelle** : en attendant Netlify, une préversion privée tourne sur claude.ai (build `npm run build:artifact`). Elle a les mêmes fonctions, sauf l’import GitHub/URL (réseau externe bloqué), le téléchargement de fichiers (le texte est copié dans le presse-papiers), le hors-ligne et l’installation.
 
 **Tester en production** : ouvre l’URL, importe ton PGN, lance une session ; *Réglages → À propos* affiche la version. Hors ligne : après une première visite, l’application se recharge sans réseau (bandeau « Prête pour le hors-ligne »).
 

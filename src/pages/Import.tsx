@@ -10,7 +10,7 @@ import { gameRecordFromParsed } from '../core/repertoire/build';
 import { parseInBackground, readPgnFile } from '../workers/parseClient';
 import { fetchGithubFile, fetchUrlText, getToken, listPgnFiles, parseGithubInput, toRawUrl, type GithubFile } from '../integrations/github';
 import { useLibrary } from '../state/library';
-import { DEFAULT_GITHUB_REPO } from '../config';
+import { DEFAULT_GITHUB_REPO, IS_ARTIFACT_PREVIEW } from '../config';
 import { Segmented, Tabs, toast } from '../ui/kit';
 import { PageHeader } from './common';
 import { importParsed } from './importHelpers';
@@ -276,6 +276,15 @@ export default function ImportPage() {
                 <button className="btn btn-primary" disabled={!paste.trim()} onClick={onPaste}>
                   <Search /> Analyser
                 </button>
+              </div>
+            </div>
+          )}
+          {(tab === 'github' || tab === 'url') && IS_ARTIFACT_PREVIEW && (
+            <div className="notice notice-warning" style={{ marginBottom: 14 }}>
+              <AlertTriangle />
+              <div>
+                Cette préversion en ligne ne peut pas contacter GitHub ni d’autres sites (restriction de la page d’aperçu). Télécharge ton fichier puis importe-le depuis
+                l’onglet « Fichiers » ; l’import GitHub fonctionne dans la version Netlify et dans l’application Android.
               </div>
             </div>
           )}

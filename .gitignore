@@ -27,3 +27,6 @@ android/capacitor-cordova-android-plugins/build/
 
 # APK copiés pour distribution manuelle
 /release/
+
+# Préversion claude.ai (npm run build:artifact)
+/dist-artifact/

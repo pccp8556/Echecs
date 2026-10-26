@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import type { MasteryLevel } from '../core/srs/srs';
 import { MASTERY_LABELS } from '../core/srs/srs';
 import { isNative, shareTextFile } from '../native';
+import { IS_ARTIFACT_PREVIEW } from '../config';
 
 /* ---------------- Notifications ---------------- */
 
@@ -367,6 +368,14 @@ export async function copyText(text: string, what = 'Copié'): Promise<void> {
 export function downloadText(name: string, text: string, mime = 'application/x-chess-pgn') {
   if (isNative()) {
     shareTextFile(name, text, mime).catch((e) => toast.error('Export impossible', e instanceof Error ? e.message : String(e)));
+    return;
+  }
+  if (IS_ARTIFACT_PREVIEW) {
+    // La page d'aperçu bloque les téléchargements : on copie le contenu à la place.
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => toast.info('Téléchargement indisponible dans la préversion', `Le contenu de « ${name} » a été copié dans le presse-papiers.`))
+      .catch(() => toast.error('Téléchargement indisponible dans la préversion', 'Utilise la version Netlify ou Android pour exporter des fichiers.'));
     return;
   }
   const blob = new Blob([text], { type: `${mime};charset=utf-8` });

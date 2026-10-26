@@ -4,7 +4,8 @@ import { BarChart3, BookOpen, GraduationCap, Home, Settings as SettingsIcon, Upl
 import { PieceSprites, PieceSvg } from './ui/board/pieces';
 import { DialogHost, Toasts } from './ui/kit';
 import { useLibrary } from './state/library';
-import { APP_NAME, APP_TAGLINE } from './config';
+import { APP_NAME, APP_TAGLINE, IS_ARTIFACT_PREVIEW } from './config';
+import { useState } from 'react';
 import { UpdatePrompt } from './ui/UpdatePrompt';
 
 const NAV = [
@@ -20,6 +21,22 @@ export function BrandMark() {
     <span className="brand-mark" aria-hidden="true">
       <PieceSvg set="cburnett" piece="wn" />
     </span>
+  );
+}
+
+function PreviewBanner() {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return (
+    <div className="preview-banner" role="note">
+      <span>
+        <strong>Préversion en ligne.</strong> Tout fonctionne et tes données restent dans ce navigateur, sauf : export de fichiers (copié dans le presse-papiers à la
+        place), import GitHub/URL, mode hors ligne et installation.
+      </span>
+      <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
+        Compris
+      </button>
+    </div>
   );
 }
 
@@ -81,6 +98,7 @@ export default function App() {
         </Link>
       </header>
       <main className="main" id="main" tabIndex={-1} style={{ outline: 'none' }}>
+        {IS_ARTIFACT_PREVIEW && <PreviewBanner />}
         <Outlet />
       </main>
       <nav className="tabbar" aria-label="Navigation">
