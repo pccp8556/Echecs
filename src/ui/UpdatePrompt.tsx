@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, WifiOff } from 'lucide-react';
+import { isNative } from '../native';
 
 /**
  * Service worker (PWA) : met l'application en cache pour un usage hors ligne et
@@ -23,7 +24,8 @@ export function UpdatePrompt() {
   }, []);
 
   useEffect(() => {
-    if (import.meta.env.DEV || !('serviceWorker' in navigator)) return;
+    // Dans l'application Android, les fichiers sont déjà embarqués : pas de service worker.
+    if (import.meta.env.DEV || !('serviceWorker' in navigator) || isNative()) return;
     let cancelled = false;
     import('virtual:pwa-register')
       .then(({ registerSW }) => {

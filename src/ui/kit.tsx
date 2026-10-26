@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import type { MasteryLevel } from '../core/srs/srs';
 import { MASTERY_LABELS } from '../core/srs/srs';
+import { isNative, shareTextFile } from '../native';
 
 /* ---------------- Notifications ---------------- */
 
@@ -364,6 +365,10 @@ export async function copyText(text: string, what = 'Copié'): Promise<void> {
 }
 
 export function downloadText(name: string, text: string, mime = 'application/x-chess-pgn') {
+  if (isNative()) {
+    shareTextFile(name, text, mime).catch((e) => toast.error('Export impossible', e instanceof Error ? e.message : String(e)));
+    return;
+  }
   const blob = new Blob([text], { type: `${mime};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

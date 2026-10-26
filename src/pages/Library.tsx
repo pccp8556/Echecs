@@ -261,6 +261,24 @@ export default function Library() {
           >
             <Play /> Réviser ensemble
           </button>
+          <button
+            className="btn btn-sm"
+            disabled={picked.size < 1}
+            onClick={async () => {
+              const parts: string[] = [];
+              for (const id of picked) {
+                const rep = repertoires.find((r) => r.id === id);
+                if (!rep) continue;
+                const g = await loadGames(id);
+                const notes = new Map([...cards.values()].filter((c) => c.repertoireId === id && c.note).map((c) => [c.posKey, c.note!]));
+                parts.push(exportRepertoirePgn(rep, g, { annotations: true, notes }).trim());
+              }
+              downloadText(safeFileName(picked.size === 1 ? repertoires.find((r) => picked.has(r.id))?.name ?? 'repertoires' : `${picked.size} repertoires`), parts.join('\n\n\n') + '\n');
+              toast.success('PGN exporté', `${picked.size} répertoire(s) dans un seul fichier.`);
+            }}
+          >
+            <Download /> Exporter en PGN
+          </button>
         </div>
       )}
 

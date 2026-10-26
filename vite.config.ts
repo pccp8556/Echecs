@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import securityHeaders from './deploy/security-headers.json';
 
 export default defineConfig({
   plugins: [
@@ -50,5 +51,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
   },
   server: { port: 5173, strictPort: true },
-  preview: { port: 4173, strictPort: true },
+  // Mêmes en-têtes que Netlify : les tests E2E vérifient que la CSP n'empêche rien.
+  preview: { port: 4173, strictPort: true, headers: securityHeaders },
 });

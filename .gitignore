@@ -24,3 +24,6 @@ android/capacitor-cordova-android-plugins/build/
 /test-results/
 /playwright-report/
 /blob-report/
+
+# APK copiés pour distribution manuelle
+/release/

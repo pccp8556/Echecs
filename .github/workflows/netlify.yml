@@ -1,0 +1,35 @@
+name: Netlify (facultatif)
+
+# Déploiement via l'API Netlify, utile seulement si le site n'est pas déjà relié
+# au dépôt depuis l'interface Netlify. Nécessite les secrets NETLIFY_AUTH_TOKEN
+# et NETLIFY_SITE_ID ; sans eux, le workflow ne fait rien.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: ${{ env.NETLIFY_AUTH_TOKEN != '' }}
+      - uses: actions/setup-node@v4
+        if: ${{ env.NETLIFY_AUTH_TOKEN != '' }}
+        with:
+          node-version: 22
+          cache: npm
+      - if: ${{ env.NETLIFY_AUTH_TOKEN != '' }}
+        run: npm ci && npm run build
+      - name: Prévisualisation (branches) ou production (main)
+        if: ${{ env.NETLIFY_AUTH_TOKEN != '' }}
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            npx --yes netlify-cli@17 deploy --dir=dist --prod
+          else
+            npx --yes netlify-cli@17 deploy --dir=dist --alias="$(echo "$GITHUB_REF_NAME" | tr -c 'a-zA-Z0-9-' '-' | cut -c1-37)"
+          fi
