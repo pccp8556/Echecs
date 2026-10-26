@@ -20,7 +20,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      # Le paquet « tools » (installé par défaut par l'action) n'existe plus : liste explicite.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
       - run: npm ci
       - run: npm run build
       - run: npx cap sync android
