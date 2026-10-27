@@ -1,21 +1,20 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, History, Pencil, RotateCcw, Search, Eye } from 'lucide-react';
 import { Link } from 'react-router';
-import type { MergedForest, MergedNode } from '../../core/repertoire/merged';
+import type { MergedForest } from '../../core/repertoire/merged';
 import { rootKeyOf, rootNodeKey } from '../../core/repertoire/merged';
-import { enumerateLines, lineText, type Line } from '../../core/repertoire/lines';
+import { enumerateLines, lineText } from '../../core/repertoire/lines';
 import { fullSelection, type RepertoireSelection, type ResolvedSelection, resolveSelection } from '../../core/repertoire/selection';
 import { header, type GameRecord, type LineMark, type Repertoire } from '../../core/repertoire/types';
 import { LINE_MARKS } from '../../core/repertoire/types';
-import { formatLine, formatSan, type NotationStyle } from '../../core/chess/notation';
+import { formatLine, type NotationStyle } from '../../core/chess/notation';
 import type { Color } from '../../core/chess/fen';
 import { lineMastery } from '../../state/derived';
 import { MASTERY_LABELS, type ReviewCard } from '../../core/srs/srs';
 import { listRevisions } from '../../storage/repo';
 import type { Revision } from '../../storage/db';
-import { ColorDot, EmptyState, confirmDialog, downloadText, formatRelative, toast } from '../../ui/kit';
+import { EmptyState, confirmDialog, downloadText, formatRelative, toast } from '../../ui/kit';
 import { exportRepertoirePgn, safeFileName } from '../../core/repertoire/export';
-import { segmentFrom } from './TreeView';
 import { useLibrary } from '../../state/library';
 
 /* ---------------- Vue liste des lignes ---------------- */
@@ -108,68 +107,6 @@ export function LinesView({
     </div>
   );
 }
-
-/* ---------------- Vue graphique ---------------- */
-
-interface GNode {
-  head: MergedNode;
-  tail: MergedNode;
-  y: number;
-  children: GNode[];
-}
-
-export function GraphView({ forest, root, res, current, notation, onNavigate }: { forest: MergedForest; root: MergedNode; res: ResolvedSelection; current: string; notation: NotationStyle; onNavigate: (k: string) => void }) {
-  const { nodes, height, maxPly } = useMemo(() => {
-    let leaf = 0;
-    let maxPly = 0;
-    const build = (head: MergedNode): GNode => {
-      const seg = segmentFrom(head);
-      const tail = seg[seg.length - 1];
-      maxPly = Math.max(maxPly, tail.ply);
-      const children = tail.children.map(build);
-      const y = children.length ? (children[0].y + children[children.length - 1].y) / 2 : leaf++;
-      return { head, tail, y, children };
-    };
-    const nodes = root.children.map(build);
-    return { nodes, height: Math.max(1, leaf), maxPly };
-  }, [root]);
-  void forest;
-  const X = 26;
-  const Y = 20;
-  const W = (maxPly + 4) * X + 60;
-  const H = height * Y + 30;
-  if (height > 1500) return <p className="muted">Ce répertoire compte trop de lignes pour la vue graphique ({height}). Utilise l’arbre ou la liste.</p>;
-  const items: ReactElement[] = [];
-  const draw = (g: GNode, px: number, py: number) => {
-    const x = g.head.ply * X;
-    const y = g.y * Y + 20;
-    const tx = g.tail.ply * X;
-    const sel = res.selected.has(g.head.key);
-    items.push(<path key={`e${g.head.key}`} d={`M${px},${py} C${(px + x) / 2},${py} ${(px + x) / 2},${y} ${x},${y} L${tx},${y}`} className={`g-edge ${sel ? 'is-on' : ''}`} />);
-    const isCur = g.head.key === current || segmentFrom(g.head).some((n) => n.key === current);
-    const parentFen = g.head.parentKey ? forest.byKey.get(g.head.parentKey)?.fen ?? g.head.fen : g.head.fen;
-    items.push(
-      <g key={`n${g.head.key}`} className={`g-node ${sel ? 'is-on' : ''} ${isCur ? 'is-current' : ''}`} onClick={() => onNavigate(g.head.key)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onNavigate(g.head.key)}>
-        <circle cx={x} cy={y} r={4.5} />
-        <text x={x + 7} y={y - 6}>
-          {formatLine([g.head.san], parentFen, notation).replace(/^(\d+)\.\.\./, '$1…')}
-        </text>
-        <title>{formatSan(g.head.san, notation)}</title>
-      </g>,
-    );
-    for (const c of g.children) draw(c, tx, y);
-  };
-  for (const n of nodes) draw(n, 0, (nodes.length ? (nodes[0].y + nodes[nodes.length - 1].y) / 2 : 0) * Y + 20);
-  return (
-    <div className="graph-wrap">
-      <svg width={W} height={H} viewBox={`-10 0 ${W + 10} ${H}`} className="graph" role="img" aria-label="Carte graphique des variantes">
-        {items}
-      </svg>
-    </div>
-  );
-}
-
-/* ---------------- Chapitres ---------------- */
 
 export function ChaptersView({
   rep,
@@ -311,45 +248,3 @@ export function HistoryView({ rep }: { rep: Repertoire }) {
 }
 
 /* ---------------- Comparaison de deux suites ---------------- */
-
-export function CompareView({ node, notation }: { node: MergedNode; notation: NotationStyle }) {
-  const [a, setA] = useState(0);
-  const [b, setB] = useState(Math.min(1, node.children.length - 1));
-  const lineOf = (start: MergedNode) => {
-    const out = [start];
-    let n = start;
-    while (n.children[0]) {
-      n = n.children[0];
-      out.push(n);
-    }
-    return out;
-  };
-  const la = lineOf(node.children[a]);
-  const lb = lineOf(node.children[b]);
-  const col = (line: MergedNode[], idx: number, set: (i: number) => void) => (
-    <div className="stack-sm compare-col">
-      <select className="select" value={idx} onChange={(e) => set(Number(e.target.value))} aria-label="Suite à comparer">
-        {node.children.map((c, i) => (
-          <option key={c.key} value={i}>
-            {formatLine([c.san], node.fen, notation)}
-          </option>
-        ))}
-      </select>
-      <p className="mono small">{formatLine(line.map((n) => n.san), node.fen, notation)}</p>
-      {line.flatMap((n) => n.comments).slice(0, 3).map((c, i) => (
-        <blockquote key={i} className="small muted">
-          {c.text}
-        </blockquote>
-      ))}
-    </div>
-  );
-  return (
-    <div className="grid grid-2">
-      {col(la, a, setA)}
-      {col(lb, b, setB)}
-    </div>
-  );
-}
-
-export type { Line };
-export { ColorDot };

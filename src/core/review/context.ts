@@ -73,14 +73,12 @@ export function buildSessionContext(
   return { reps };
 }
 
-/** Camp joué par l'utilisateur pour une ligne. */
-export function userColorForLine(ctx: RepContext, line: Line, sessionColor: Color | 'auto' | 'both'): Color | 'both' {
-  if (sessionColor !== 'auto') return sessionColor;
+/** Camp joué par l'utilisateur pour une ligne (celui de la partie, sinon du répertoire). */
+export function userColorForLine(ctx: RepContext, line: Line): Color {
   const gid = line.gameIds[0];
   return gid ? ctx.gameColor(gid) : repertoireColor(ctx.repertoire);
 }
 
-export function userColorForRepertoire(ctx: RepContext, sessionColor: Color | 'auto' | 'both'): Color | 'both' {
-  if (sessionColor !== 'auto') return sessionColor;
+export function userColorForRepertoire(ctx: RepContext): Color {
   return repertoireColor(ctx.repertoire);
 }

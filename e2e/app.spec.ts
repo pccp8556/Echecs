@@ -9,7 +9,7 @@ test.describe('navigation et routes SPA', () => {
       ['/', /Tes ouvertures/],
       ['/bibliotheque', /Mes répertoires/],
       ['/importer', /Importer des PGN/],
-      ['/session/nouvelle', /Nouvelle session/],
+      ['/session/nouvelle', /Réviser/],
       ['/statistiques', /Ta progression/],
       ['/parametres', /Préférences/],
       ['/une-page-inexistante', /Page introuvable/],
@@ -72,9 +72,9 @@ test.describe('sélection, révision et « Paul aurait trouvé »', () => {
     await expect(summary).toContainText('33 lignes');
     await page.getByRole('button', { name: 'Réviser la sélection' }).click();
     await page.waitForURL(/session\/nouvelle/);
-    await page.getByRole('radio', { name: /Répertoire complet/ }).click();
-    await expect(page.locator('.setup-summary')).toContainText('Lignes33');
-    await page.getByRole('button', { name: 'Commencer' }).click();
+    await page.getByRole('radio', { name: /Toute la sélection/ }).click();
+    await expect(page.getByRole('radio', { name: /Toute la sélection/ })).toContainText('33 lignes');
+    await page.getByRole('button', { name: 'Commencer · 33 lignes' }).click();
     await page.waitForURL(/\/session\/(?!nouvelle)/);
     await waitForQuestion(page);
     // Le tronc d'approche est joué automatiquement : la première question est 7.e5.
@@ -87,8 +87,8 @@ test.describe('sélection, révision et « Paul aurait trouvé »', () => {
   test('coup conforme, erreur de répertoire, correction, coup illégal et reprise', async ({ page }) => {
     await importUserPgn(page);
     await page.getByRole('button', { name: 'Réviser la sélection' }).click();
-    await page.getByRole('radio', { name: /Répertoire complet/ }).click();
-    await page.getByRole('button', { name: 'Commencer' }).click();
+    await page.getByRole('radio', { name: /Toute la sélection/ }).click();
+    await page.getByRole('button', { name: /^Commencer/ }).click();
     await page.waitForURL(/\/session\/(?!nouvelle)/);
     await waitForQuestion(page);
     await dragMove(page, '.review-board', 'e2', 'e4');
@@ -99,7 +99,9 @@ test.describe('sélection, révision et « Paul aurait trouvé »', () => {
     await expect(paul).toBeVisible();
     await expect(paul).toContainText('Paul aurait trouvé');
     await expect(paul).toContainText('Tu as joué 2.Fc4, mais ton répertoire prévoit 2.Cf3.');
-    await expect(paul).toContainText('La ligne de référence continue avec');
+    // La correction ne dévoile ni la suite de la ligne ni le nom du chapitre (qui contient des coups).
+    await expect(paul).not.toContainText('d6');
+    await expect(page.locator('.prompt-line')).not.toContainText('Chapter');
     await paul.getByRole('button', { name: 'Rejouer la position' }).click();
     await clickMove(page, '.review-board', 'g1', 'f3');
     await waitForQuestion(page);

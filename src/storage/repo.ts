@@ -1,7 +1,7 @@
-import { getDb, type Revision, type SavedPreset, type StoredLog, type TrashEntry } from './db';
+import { getDb, type Revision, type StoredLog, type TrashEntry } from './db';
 import type { Folder, GameRecord, Repertoire } from '../core/repertoire/types';
 import { applyReview, newCard, resetScheduling, type Grade4, type ReviewCard } from '../core/srs/srs';
-import type { SessionState } from '../core/review/types';
+import { isReviewMode, type SessionState } from '../core/review/types';
 import { buildForest } from '../core/repertoire/merged';
 import { answersSignature, buildPositionIndex } from '../core/repertoire/positions';
 import { computeStats, newId } from '../core/repertoire/build';
@@ -328,21 +328,7 @@ export async function deleteSession(id: string): Promise<void> {
 
 /** Dernière session non terminée (pour « Reprendre ma session »). */
 export async function getResumableSession(): Promise<SessionState | undefined> {
-  return (await listSessions()).find((s) => s.phase !== 'finished');
-}
-
-/* ---------------- Préréglages enregistrés ---------------- */
-
-export async function listPresets(): Promise<SavedPreset[]> {
-  return (await (await getDb()).getAll('presets')).sort((a, b) => (b.lastUsedAt ?? b.updatedAt) - (a.lastUsedAt ?? a.updatedAt));
-}
-
-export async function savePreset(p: SavedPreset): Promise<void> {
-  await (await getDb()).put('presets', p);
-}
-
-export async function deletePreset(id: string): Promise<void> {
-  await (await getDb()).delete('presets', id);
+  return (await listSessions()).find((s) => s.phase !== 'finished' && isReviewMode(s.config.mode));
 }
 
 /* ---------------- Méta ---------------- */

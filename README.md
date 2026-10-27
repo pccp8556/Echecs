@@ -47,14 +47,21 @@ Menu **Importer un PGN** :
 Avant l’import, un **rapport** indique parties, coups, positions, lignes, variantes, commentaires, flèches, coups invalides, erreurs (partie, ligne, numéro de coup) et le camp détecté (modifiable). Rien n’est jamais supprimé : une variante illisible est conservée telle quelle et exclue des révisions.
 
 ### 2. Sélectionner une variante
-Ouvre le répertoire (**Explorer**). L’arbre fusionne tous les chapitres : coche/décoche une branche, une sous-variante, ou passe par **Chapitres**, **Lignes** ou **Graphe**. Le bandeau indique le nombre de lignes et de positions sélectionnées. **Rien** puis une case = « seulement cette variante ». **Enregistrer** garde la sélection comme session réutilisable. Les coups qui mènent à la sélection sont joués automatiquement, jamais demandés (sauf option).
+Ouvre le répertoire (**Explorer**). L’arbre fusionne tous les chapitres : coche/décoche une branche, une sous-variante, ou passe par **Chapitres** ou **Lignes**. Le bandeau indique le nombre de lignes et de positions sélectionnées. **Rien** puis une case = « seulement cette variante ». La sélection est gardée (« Ma sélection »). Les coups qui mènent à la sélection sont joués automatiquement, jamais demandés. Le menu **…** d’une variante permet de la réviser seule ou de l’**abandonner** (exclue des révisions, conservée dans le PGN).
 
 ### 3. Lancer une session
-**Réviser la sélection** (ou **Commencer ma révision** sur l’accueil) : choisis un préréglage ou un mode, la couleur, le nombre de positions, la durée, les aides et la politique d’erreur.
+**Réviser** (ou **Commencer ma révision** sur l’accueil) : coche les répertoires (tout ou « Ma sélection »), choisis un mode et une longueur, puis **Commencer**.
 
-Modes : révision intelligente (FSRS), apprentissage guidé, à l’aveugle, répertoire complet, coups critiques, erreurs, contre une ligne (couleurs inversables), entraînement libre, chronométré, parcours progressif, exploration.
+| Mode | Contenu |
+| --- | --- |
+| Révision du jour | positions dues (répétition espacée FSRS), puis quelques nouvelles |
+| Apprendre | chaque coup est montré puis rejoué ; les lignes jamais vues d’abord |
+| Toute la sélection | chaque ligne sélectionnée, du premier au dernier coup |
+| Mes erreurs | positions ratées, révélées ou hésitantes |
 
-Pendant la révision : glisser-déposer ou clic-clic (souris et tactile), saisie du coup au clavier (`Cf3` ou `Nf3`), indice, solution, rejouer, poursuivre, recommencer la variante, revoir plus tard, favori, note. Raccourcis : `Entrée` continuer, `R` rejouer, `H` indice, `S` solution, `1`–`4` noter.
+Pendant la révision : glisser-déposer ou clic-clic (souris et tactile), indice, solution, rejouer, poursuivre, recommencer. Raccourcis : `Entrée` continuer, `R` rejouer, `H` indice, `S` solution. Le nom de la ligne et du chapitre n’est affiché qu’une fois la ligne terminée (il contient souvent les coups attendus), et la correction donne le coup attendu sans dévoiler la suite.
+
+Le camp joué est celui du répertoire (modifiable dans la bibliothèque). Dans **Réglages → Révision** : ton du message de Paul, solution immédiate ou second essai, nombre de nouvelles positions par jour, notation manuelle (À revoir / Difficile / Bien / Facile, touches `1`–`4`).
 
 ### 4. Modifier ton répertoire
 **Éditer** : mode visuel (joue un coup pour ajouter une variante, commentaires, NAG, promotion/suppression de variantes, en-têtes) ou mode texte (PGN de la partie ou de tout le répertoire, validé avant application, avec alerte si des coups/commentaires disparaissent). Annuler/rétablir (`Ctrl+Z` / `Ctrl+Y`).

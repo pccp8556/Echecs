@@ -8,7 +8,6 @@ import { derive, lineMastery, masterySummary, userPositionKeys } from '../state/
 import { getResumableSession } from '../storage/repo';
 import type { SessionState } from '../core/review/types';
 import { MODE_INFO } from '../core/review/types';
-import { PRESETS } from '../core/review/presets';
 import { fullSelection } from '../core/repertoire/selection';
 import { enumerateLines } from '../core/repertoire/lines';
 import { resolveSelection } from '../core/repertoire/selection';
@@ -17,7 +16,7 @@ import { averageTimeMs, dailySeries, rateOf, totalThinkingMs } from '../core/sta
 import { formatSan } from '../core/chess/notation';
 import { EmptyState, Loading, MasteryBar, formatDuration, formatRelative, pct, toast } from '../ui/kit';
 import { StackedColumns } from '../ui/charts';
-import { MiniBoard, PageHeader, greeting, startSessionAndGo, useLogs } from './common';
+import { MiniBoard, PageHeader, greeting, sessionConfig, startSessionAndGo, useLogs } from './common';
 import { importDemo } from './importHelpers';
 import { MASTERY_LABELS, masteryOf } from '../core/srs/srs';
 
@@ -103,11 +102,10 @@ export default function Dashboard() {
 
   const daily = () => {
     if (totals.due + Math.min(totals.fresh, settings.newLimit) === 0) {
-      toast.info('Tout est à jour', 'Aucune position n’est due aujourd’hui. Tu peux lancer une révision complète ou travailler tes erreurs.');
+      toast.info('Tout est à jour', 'Aucune position n’est due aujourd’hui. Tu peux réviser toute la sélection ou travailler tes erreurs.');
       return;
     }
-    const cfg = PRESETS[0].build(repertoires.map((r) => fullSelection(r.id)));
-    startSessionAndGo({ ...cfg, newLimit: settings.newLimit, feedback: 'immediate', onError: settings.errorPolicy, askConfidence: settings.askConfidence }, navigate);
+    startSessionAndGo(sessionConfig('smart', repertoires.map((r) => fullSelection(r.id))), navigate);
   };
 
   if (!repertoires.length) {
@@ -147,7 +145,7 @@ export default function Dashboard() {
           {[
             { icon: <Upload />, t: '1. Importe', d: 'Un ou plusieurs fichiers PGN, un texte collé ou un fichier GitHub. Variantes et commentaires sont conservés.' },
             { icon: <GitBranch />, t: '2. Sélectionne', d: 'Coche un chapitre, une variante, une sous-variante ou tout le répertoire.' },
-            { icon: <Target />, t: '3. Révise', d: '10 modes de révision, une répétition espacée FSRS et des statistiques réelles.' },
+            { icon: <Target />, t: '3. Révise', d: 'Sur l’échiquier, avec une répétition espacée qui revient sur ce que tu oublies.' },
           ].map((x) => (
             <div className="card" key={x.t}>
               <div className="empty-icon" style={{ width: 44, height: 44, borderRadius: 14, marginBottom: 12 }}>
@@ -195,23 +193,12 @@ export default function Dashboard() {
             {resumable && (
               <Link className="btn btn-lg" to={`/session/${resumable.id}`}>
                 <History /> Reprendre ma session
-                <span className="badge">{MODE_INFO[resumable.config.mode].short}</span>
+                <span className="badge">{MODE_INFO[resumable.config.mode].label}</span>
               </Link>
             )}
             <Link className="btn btn-lg btn-ghost" to="/session/nouvelle">
               Autres modes <ArrowRight />
             </Link>
-          </div>
-          <div className="preset-row">
-            {PRESETS.slice(1, 5).map((p) => (
-              <button
-                key={p.id}
-                className="chip"
-                onClick={() => startSessionAndGo({ ...p.build(repertoires.map((r) => fullSelection(r.id))), onError: settings.errorPolicy }, navigate)}
-              >
-                {p.name}
-              </button>
-            ))}
           </div>
         </div>
         {heroTrunk && (
@@ -278,7 +265,7 @@ export default function Dashboard() {
               }))}
               series={[
                 { key: 'correct', label: 'Trouvés du premier coup', color: 'var(--chart-1)' },
-                { key: 'errors', label: 'Erreurs, solutions ou temps écoulé', color: 'var(--chart-2)' },
+                { key: 'errors', label: 'Erreurs ou solutions vues', color: 'var(--chart-2)' },
               ]}
             />
           )}
@@ -307,10 +294,7 @@ export default function Dashboard() {
                   <button
                     className="btn btn-sm"
                     onClick={() =>
-                      startSessionAndGo(
-                        { ...PRESETS[2].build([fullSelection(f.rep.id)]), mode: 'line', lineKeys: [f.key], alternatives: 'strict', repeatAnswered: true, onError: settings.errorPolicy },
-                        navigate,
-                      )
+                      startSessionAndGo(sessionConfig('full', [fullSelection(f.rep.id)], { lineKeys: [f.key] }), navigate)
                     }
                   >
                     Réviser
@@ -335,7 +319,7 @@ export default function Dashboard() {
             {recentErrors.length > 0 && (
               <button
                 className="btn btn-sm"
-                onClick={() => startSessionAndGo({ ...PRESETS[3].build(repertoires.map((r) => fullSelection(r.id))), onError: settings.errorPolicy }, navigate)}
+                onClick={() => startSessionAndGo(sessionConfig('mistakes', repertoires.map((r) => fullSelection(r.id))), navigate)}
               >
                 Réviser mes erreurs
               </button>

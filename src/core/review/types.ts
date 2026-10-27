@@ -2,139 +2,55 @@ import type { Color } from '../chess/fen';
 import type { RepertoireSelection } from '../repertoire/selection';
 import type { AttemptResult, Grade4 } from '../srs/srs';
 
-export type ReviewMode =
-  | 'smart'
-  | 'learn'
-  | 'blind'
-  | 'full'
-  | 'critical'
-  | 'mistakes'
-  | 'line'
-  | 'free'
-  | 'timed'
-  | 'progressive';
+export type ReviewMode = 'smart' | 'learn' | 'full' | 'mistakes';
 
-export const MODE_INFO: Record<ReviewMode | 'explore', { label: string; short: string; description: string; kind: 'lines' | 'positions' | 'free' | 'explore' }> = {
+export const MODE_INFO: Record<ReviewMode, { label: string; description: string; kind: 'lines' | 'positions' }> = {
   smart: {
-    label: 'Révision intelligente',
-    short: 'Intelligente',
-    description: 'Les positions dues selon la répétition espacée, puis les plus fragiles et quelques nouvelles.',
+    label: 'Révision du jour',
+    description: 'Les positions à revoir aujourd’hui (répétition espacée), puis quelques nouvelles.',
     kind: 'positions',
   },
   learn: {
-    label: 'Apprentissage guidé',
-    short: 'Guidé',
-    description: 'Chaque coup attendu est d’abord montré, puis tu le rejoues. Idéal pour découvrir une ligne.',
+    label: 'Apprendre',
+    description: 'Chaque coup est d’abord montré, puis tu le rejoues. Les lignes jamais vues passent en premier.',
     kind: 'lines',
-  },
-  blind: {
-    label: 'Révision à l’aveugle',
-    short: 'À l’aveugle',
-    description: 'Une position, aucun indice : trouve le coup de ton répertoire.',
-    kind: 'positions',
   },
   full: {
-    label: 'Répertoire complet',
-    short: 'Complet',
-    description: 'Parcourt toutes les lignes sélectionnées et t’interroge à chaque coup.',
+    label: 'Toute la sélection',
+    description: 'Chaque ligne sélectionnée, du premier au dernier coup.',
     kind: 'lines',
-  },
-  critical: {
-    label: 'Coups critiques',
-    short: 'Critiques',
-    description: 'Les positions dont dépendent le plus de lignes : une erreur ici te fait sortir de ton répertoire.',
-    kind: 'positions',
   },
   mistakes: {
-    label: 'Révision des erreurs',
-    short: 'Erreurs',
-    description: 'Uniquement les coups ratés, hésitants ou révélés.',
+    label: 'Mes erreurs',
+    description: 'Les positions ratées, révélées ou hésitantes.',
     kind: 'positions',
-  },
-  line: {
-    label: 'Contre une ligne',
-    short: 'Contre une ligne',
-    description: 'L’application joue les coups adverses d’une ligne précise ; tu joues les tiens, dans la couleur de ton choix.',
-    kind: 'lines',
-  },
-  free: {
-    label: 'Entraînement libre',
-    short: 'Libre',
-    description: 'Joue librement : chaque coup est comparé à tes lignes sélectionnées.',
-    kind: 'free',
-  },
-  timed: {
-    label: 'Test chronométré',
-    short: 'Chronométré',
-    description: 'Retrouve les coups dans un temps limité.',
-    kind: 'positions',
-  },
-  progressive: {
-    label: 'Parcours progressif',
-    short: 'Progressif',
-    description: 'Des lignes courtes aux plus longues ; indices puis chronomètre quand tu enchaînes les réussites.',
-    kind: 'lines',
-  },
-  explore: {
-    label: 'Exploration',
-    short: 'Exploration',
-    description: 'Navigue librement dans tes variantes, sans notation.',
-    kind: 'explore',
   },
 };
 
-export type AlternativesPolicy = 'follow' | 'strict' | 'main';
-export type QuestionOrder = 'priority' | 'sequential' | 'random' | 'depth';
-export type FeedbackStyle = 'sober' | 'encouraging' | 'humorous' | 'competitive';
-
-export interface ErrorPolicy {
-  /** Autorise une nouvelle tentative après une erreur. */
-  retry: boolean;
-  /** Révèle automatiquement le coup attendu après N erreurs (0 = immédiatement). */
-  revealAfter: number;
-  /** L'erreur interrompt la ligne. */
-  stopLine: boolean;
-  /** Une erreur corrigée compte quand même comme un échec. */
-  countAsFailure: boolean;
+export function isReviewMode(mode: unknown): mode is ReviewMode {
+  return typeof mode === 'string' && Object.prototype.hasOwnProperty.call(MODE_INFO, mode);
 }
+
+/** Libellé d'un mode, y compris ceux des anciennes versions (journal, sessions enregistrées). */
+export function modeLabel(mode: string): string {
+  return isReviewMode(mode) ? MODE_INFO[mode].label : 'Ancien mode';
+}
+
+export type FeedbackStyle = 'sober' | 'encouraging' | 'humorous' | 'competitive';
 
 export interface SessionConfig {
   mode: ReviewMode;
   selections: RepertoireSelection[];
-  /** Camp joué : 'auto' = celui du répertoire (ou de la partie). */
-  color: Color | 'auto' | 'both';
-  /** Nombre maximal de questions (0 = illimité). */
+  /** Nombre maximal de positions (ou de lignes pour les modes par lignes), 0 = tout. */
   maxQuestions: number;
-  /** Durée maximale en minutes (0 = illimitée). */
-  maxMinutes: number;
-  order: QuestionOrder;
-  hints: boolean;
-  showLegalMoves: boolean;
-  alternatives: AlternativesPolicy;
-  /** Retour immédiat après chaque coup ou résumé à la fin. */
-  feedback: 'immediate' | 'deferred';
-  onError: ErrorPolicy;
-  /** Demander aussi les coups du tronc d'approche (avant la sélection). */
-  askTrunk: boolean;
-  /** Dans une session par lignes, redemander les positions déjà réussies. */
-  repeatAnswered: boolean;
-  /** Rejouer la ligne jusqu'à la position (sinon la position est affichée directement). */
-  showContext: boolean;
-  /** Temps par coup en secondes (0 = sans limite). */
-  secondsPerMove: number;
-  /** Mettre à jour la répétition espacée. */
-  graded: boolean;
-  /** Nouvelles positions maximum (mode intelligent). */
+  /** Après une erreur, un second essai avant de montrer la solution. */
+  secondChance: boolean;
+  /** Nouvelles positions maximum (révision du jour). */
   newLimit: number;
-  /** Demander la confiance après chaque bonne réponse. */
+  /** Demander la note (À revoir… Facile) après chaque bonne réponse. */
   askConfidence: boolean;
-  analysis: boolean;
-  scoring: boolean;
-  /** Ligne imposée (mode « contre une ligne »). */
+  /** Lignes imposées (révision d'une variante précise). */
   lineKeys?: string[];
-  includeAbandoned: boolean;
-  /** Libellé du préréglage utilisé. */
-  presetName?: string;
 }
 
 export type QueueItem =
@@ -148,22 +64,10 @@ export interface PlayedMove {
   fenAfter: string;
   by: 'user' | 'auto';
   /** Résultat si c'était une question. */
-  result?: 'correct' | 'error' | 'revealed' | 'alternative' | 'learned' | 'timeout';
+  result?: 'correct' | 'error' | 'revealed' | 'learned';
 }
 
-export type FeedbackKind =
-  | 'correct'
-  | 'alternative'
-  | 'outOfSelection'
-  | 'notMain'
-  | 'error'
-  | 'timeout'
-  | 'revealed'
-  | 'learnShow'
-  | 'learned'
-  | 'lineComplete'
-  | 'opponentOutOfBook'
-  | 'info';
+export type FeedbackKind = 'correct' | 'outOfSelection' | 'error' | 'revealed' | 'learnShow' | 'lineComplete' | 'info';
 
 export interface FeedbackMove {
   san: string;
@@ -177,12 +81,9 @@ export interface Feedback {
   message: string;
   played?: FeedbackMove;
   expected?: FeedbackMove[];
-  referenceLine?: string;
-  variationName?: string;
   explanation?: string;
   severity?: { level: 'minor' | 'major' | 'critical'; text: string };
   quip?: string;
-  priorityNote?: string;
   cardId?: string;
 }
 
@@ -224,11 +125,7 @@ export interface SessionStats {
   hints: number;
   revealed: number;
   alternatives: number;
-  timeouts: number;
   learned: number;
-  score: number;
-  streak: number;
-  bestStreak: number;
   answerTimeMs: number;
   itemsDone: number;
 }
@@ -254,20 +151,16 @@ export interface SessionState {
   item?: ItemState;
   phase: Phase;
   feedback?: Feedback;
-  /** Feedbacks différés (affichés à la fin si feedback = 'deferred'). */
-  deferred: Feedback[];
   answered: Record<string, 'correct' | 'error'>;
   stats: SessionStats;
   mistakes: SessionMistake[];
-  /** Niveau courant du parcours progressif. */
-  level: number;
-  totalPausedMs: number;
 }
 
 export interface AttemptLog {
   ts: number;
   sessionId: string;
-  mode: ReviewMode;
+  /** Mode de la session (les anciennes versions en avaient d'autres). */
+  mode: ReviewMode | (string & {});
   repertoireId: string;
   posKey: string;
   cardId: string;

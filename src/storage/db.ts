@@ -10,6 +10,7 @@ export interface StoredLog extends AttemptLog {
   id?: number;
 }
 
+/** Sessions enregistrées des versions précédentes : conservées et sauvegardées, plus proposées. */
 export interface SavedPreset {
   id: string;
   name: string;

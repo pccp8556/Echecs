@@ -10,6 +10,10 @@ import { copyText } from '../../ui/kit';
 import { EnginePanel } from '../../ui/EnginePanel';
 import type { Shape } from '../../core/pgn/types';
 
+/** Lecture automatique (ms par coup) et profondeur d'analyse. */
+const AUTOPLAY_MS = 900;
+const ENGINE_DEPTH = 18;
+
 export interface OffBook {
   /** Nœud du répertoire d'où l'on est sorti. */
   fromKey: string;
@@ -97,9 +101,9 @@ export function ExplorerBoard({ forest, current, onNavigate, orientation, onFlip
 
   useEffect(() => {
     if (!playing) return;
-    const t = window.setTimeout(next, s.autoplaySpeedMs);
+    const t = window.setTimeout(next, AUTOPLAY_MS);
     return () => window.clearTimeout(t);
-  }, [playing, next, s.autoplaySpeedMs, current.key]);
+  }, [playing, next, current.key]);
 
   useExplorerKeys({
     ArrowRight: next,
@@ -161,7 +165,6 @@ export function ExplorerBoard({ forest, current, onNavigate, orientation, onFlip
           lastMove={lastMove}
           shapes={shapes}
           coordinates={s.coordinates}
-          showLegal={s.showLegal}
           theme={s.boardTheme}
           pieceSet={s.pieceSet}
           animate={animationsEnabled(s)}
@@ -192,19 +195,6 @@ export function ExplorerBoard({ forest, current, onNavigate, orientation, onFlip
           {full ? <Minimize2 /> : <Maximize2 />}
         </button>
       </div>
-      <label className="speed small muted">
-        Vitesse de lecture
-        <input
-          type="range"
-          className="range"
-          min={250}
-          max={2500}
-          step={50}
-          value={2750 - s.autoplaySpeedMs}
-          onChange={(e) => useSettings.getState().set({ autoplaySpeedMs: 2750 - Number(e.target.value) })}
-          aria-label="Vitesse de lecture automatique"
-        />
-      </label>
 
       {offBook && (
         <div className="notice notice-warning">
@@ -293,7 +283,7 @@ export function ExplorerBoard({ forest, current, onNavigate, orientation, onFlip
 
       {s.engineEnabled && (
         <div className="card card-flat">
-          <EnginePanel fen={fen} repertoireMoves={offBook ? [] : current.children.map((c) => ({ uci: c.uci, san: c.san }))} notation={s.notation as NotationStyle} depth={s.engineDepth} />
+          <EnginePanel fen={fen} repertoireMoves={offBook ? [] : current.children.map((c) => ({ uci: c.uci, san: c.san }))} notation={s.notation as NotationStyle} depth={ENGINE_DEPTH} />
         </div>
       )}
     </div>

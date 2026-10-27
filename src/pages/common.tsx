@@ -4,7 +4,9 @@ import { Board } from '../ui/board/Board';
 import { useSettings } from '../state/settings';
 import { useReview } from '../state/review';
 import { toast } from '../ui/kit';
-import type { SessionConfig } from '../core/review/types';
+import type { ReviewMode, SessionConfig } from '../core/review/types';
+import type { RepertoireSelection } from '../core/repertoire/selection';
+import { defaultConfig } from '../core/review/presets';
 import { getLogs } from '../storage/repo';
 import type { StoredLog } from '../storage/db';
 
@@ -30,12 +32,18 @@ export function MiniBoard({ fen, orientation, lastMove, label }: { fen: string; 
   );
 }
 
+/** Configuration d'une session avec les préférences de l'utilisateur. */
+export function sessionConfig(mode: ReviewMode, selections: RepertoireSelection[], extra: Partial<SessionConfig> = {}): SessionConfig {
+  const { newLimit, askConfidence, secondChance } = useSettings.getState().settings;
+  return { ...defaultConfig(mode, selections, { newLimit, askConfidence, secondChance }), ...extra };
+}
+
 export async function startSessionAndGo(config: SessionConfig, navigate: NavigateFunction) {
   try {
     const id = await useReview.getState().start(config);
     const s = useReview.getState().session;
-    if (s && s.phase === 'finished' && s.queue.length === 0 && config.mode !== 'free') {
-      toast.info('Rien à réviser avec ces réglages', 'Aucune position ne correspond (rien n’est dû, ou la sélection est vide). Essaie la révision complète ou élargis la sélection.');
+    if (s && s.phase === 'finished' && s.queue.length === 0) {
+      toast.info('Rien à réviser', 'Aucune position ne correspond (rien n’est dû, ou la sélection est vide). Essaie « Toute la sélection » ou élargis la sélection.');
       return;
     }
     navigate(`/session/${id}`);

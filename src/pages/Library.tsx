@@ -28,11 +28,10 @@ import { repertoireColor, header, type GameRecord, type Repertoire } from '../co
 import { exportRepertoirePgn, safeFileName } from '../core/repertoire/export';
 import { matchMoves } from '../core/repertoire/search';
 import { fullSelection } from '../core/repertoire/selection';
-import { PRESETS } from '../core/review/presets';
 import { listTrash, purgeTrash, restoreFromTrash } from '../storage/repo';
 import type { TrashEntry } from '../storage/db';
 import { ColorDot, EmptyState, Loading, MasteryBar, Menu, Modal, confirmDialog, downloadText, formatRelative, promptDialog, toast } from '../ui/kit';
-import { MiniBoard, PageHeader, startSessionAndGo } from './common';
+import { MiniBoard, PageHeader, sessionConfig, startSessionAndGo } from './common';
 import { reloadFromSource } from './reloadSource';
 
 type Sort = 'recent' | 'name' | 'mastery' | 'due';
@@ -257,7 +256,7 @@ export default function Library() {
           <button
             className="btn btn-sm"
             disabled={picked.size < 1}
-            onClick={() => startSessionAndGo({ ...PRESETS[2].build([...picked].map((id) => fullSelection(id))), onError: settings.errorPolicy }, navigate)}
+            onClick={() => startSessionAndGo(sessionConfig('full', [...picked].map((id) => fullSelection(id))), navigate)}
           >
             <Play /> Réviser ensemble
           </button>

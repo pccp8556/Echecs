@@ -5,6 +5,7 @@ import { useLibrary } from '../state/library';
 import { useSettings } from '../state/settings';
 import { derive } from '../state/derived';
 import { mergedPath } from '../core/repertoire/merged';
+import { repertoireColor } from '../core/repertoire/types';
 import { gameLabelFromHeaders } from '../core/pgn/parse';
 import { formatLine, formatSan } from '../core/chess/notation';
 import {
@@ -38,7 +39,6 @@ export default function StatsPage() {
   const settings = useSettings((s) => s.settings);
   const [now] = useState(() => Date.now());
   const [period, setPeriod] = useState<Period>('30');
-  const [color, setColor] = useState<'all' | 'w' | 'b'>('all');
   const [repId, setRepId] = useState<string>(params.get('rep') ?? 'all');
   const [gameId, setGameId] = useState<string>('all');
   const allLogs = useLogs();
@@ -49,11 +49,12 @@ export default function StatsPage() {
 
   const since = period === 'all' ? undefined : now - Number(period) * DAY;
   const logs = useMemo(
-    () => (allLogs ? filterLogs(allLogs, { since, color: color === 'all' ? undefined : color, repertoireId: repId === 'all' ? undefined : repId, gameId: gameId === 'all' ? undefined : gameId }) : null),
-    [allLogs, since, color, repId, gameId],
+    () => (allLogs ? filterLogs(allLogs, { since, repertoireId: repId === 'all' ? undefined : repId, gameId: gameId === 'all' ? undefined : gameId }) : null),
+    [allLogs, since, repId, gameId],
   );
-  const scopedCards = useMemo(() => [...cards.values()].filter((c) => (repId === 'all' || c.repertoireId === repId) && (color === 'all' || c.turn === color)), [cards, repId, color]);
+  const scopedCards = useMemo(() => [...cards.values()].filter((c) => repId === 'all' || c.repertoireId === repId), [cards, repId]);
 
+  const heatRep = repertoires.find((r) => r.id === repId);
   const repName = (id: string) => repertoires.find((r) => r.id === id)?.name ?? 'Répertoire supprimé';
   const gameName = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,7 +94,7 @@ export default function StatsPage() {
   const heat = squareHeatmap(logs);
   const forecast = dueForecast(scopedCards, 14, now);
   const hints = hintHeavy(scopedCards, 6);
-  const cal = calendarHeatmap(allLogs.filter((l) => (repId === 'all' || l.repertoireId === repId) && (color === 'all' || l.color === color)), 84, now).map((d) => ({ day: d.day, ts: d.ts, value: d.errors }));
+  const cal = calendarHeatmap(allLogs.filter((l) => repId === 'all' || l.repertoireId === repId), 84, now).map((d) => ({ day: d.day, ts: d.ts, value: d.errors }));
   const rows = (m: Map<string | number, Rate>, label: (k: string | number) => string) =>
     [...m.entries()]
       .filter(([, r]) => r.total > 0)
@@ -102,7 +103,7 @@ export default function StatsPage() {
 
   const exportStats = (format: 'json' | 'csv') => {
     if (format === 'json') {
-      downloadText(`statistiques-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exportedAt: new Date().toISOString(), filters: { period, color, repId, gameId }, summary: rate, logs }, null, 2), 'application/json');
+      downloadText(`statistiques-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exportedAt: new Date().toISOString(), filters: { period, repId, gameId }, summary: rate, logs }, null, 2), 'application/json');
     } else {
       const head = 'date;repertoire;partie;couleur;coup;resultat;joue;attendu;temps_ms;indices;mode';
       const body = logs.map((l: StoredLog) =>
@@ -146,16 +147,6 @@ export default function StatsPage() {
             { value: '90', label: '90 j' },
             { value: '365', label: '1 an' },
             { value: 'all', label: 'Tout' },
-          ]}
-        />
-        <Segmented
-          label="Couleur"
-          value={color}
-          onChange={setColor}
-          options={[
-            { value: 'all', label: 'Les deux' },
-            { value: 'w', label: 'Blancs' },
-            { value: 'b', label: 'Noirs' },
           ]}
         />
         <select className="select" style={{ width: 'auto' }} value={repId} onChange={(e) => { setRepId(e.target.value); setGameId('all'); }} aria-label="Répertoire">
@@ -234,7 +225,7 @@ export default function StatsPage() {
               }))}
               series={[
                 { key: 'correct', label: 'Trouvés du premier coup', color: 'var(--chart-1)' },
-                { key: 'errors', label: 'Erreurs, solutions, temps écoulé', color: 'var(--chart-2)' },
+                { key: 'errors', label: 'Erreurs ou solutions vues', color: 'var(--chart-2)' },
               ]}
             />
           </section>
@@ -328,7 +319,7 @@ export default function StatsPage() {
               </div>
               {heat.size ? (
                 <div className="heat-board">
-                  <Board fen="8/8/8/8/8/8/8/8 w - - 0 1" orientation={color === 'b' ? 'b' : 'w'} heat={heat} coordinates theme={settings.boardTheme} pieceSet={settings.pieceSet} drawable={false} label="Carte thermique des cases d’arrivée des coups manqués" />
+                  <Board fen="8/8/8/8/8/8/8/8 w - - 0 1" orientation={heatRep ? repertoireColor(heatRep) : 'w'} heat={heat} coordinates theme={settings.boardTheme} pieceSet={settings.pieceSet} drawable={false} label="Carte thermique des cases d’arrivée des coups manqués" />
                   <p className="small faint">Plus la case est rouge, plus tu as manqué de coups qui y arrivaient.</p>
                 </div>
               ) : (

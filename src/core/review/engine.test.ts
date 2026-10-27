@@ -15,9 +15,10 @@ import {
   revealSolution,
   runAuto,
   submitMove,
-  timeout,
   nextItem,
   confirmAnswer,
+  restartItem,
+  itemLabel,
   type EngineDeps,
   type EngineResult,
 } from './engine';
@@ -25,9 +26,21 @@ import { defaultConfig } from './presets';
 import { PAUL } from './feedback';
 import type { Effect, ReviewMode, SessionConfig } from './types';
 
-function setup(pgn: string, opts: { mode?: ReviewMode; config?: Partial<SessionConfig>; sel?: (id: string, forest: ReturnType<typeof buildForest>) => RepertoireSelection; cards?: (repertoireId: string, ctx: ReturnType<typeof buildSessionContext>) => ReviewCard[] } = {}) {
+function setup(
+  pgn: string,
+  opts: {
+    mode?: ReviewMode;
+    /** Camp joué (sinon celui détecté). */
+    color?: 'w' | 'b';
+    config?: Partial<SessionConfig>;
+    sel?: (id: string, forest: ReturnType<typeof buildForest>) => RepertoireSelection;
+    cards?: (repertoireId: string, ctx: ReturnType<typeof buildSessionContext>) => ReviewCard[];
+  } = {},
+) {
   const parsed = parsePgn(pgn);
-  const { repertoire, games } = repertoireFromParsed(parsed, { name: 't', source: { kind: 'paste', importedAt: 0, contentHash: '' } });
+  const built = repertoireFromParsed(parsed, { name: 't', source: { kind: 'paste', importedAt: 0, contentHash: '' } });
+  const repertoire = { ...built.repertoire, color: opts.color ?? built.repertoire.color };
+  const games = built.games;
   const forest = buildForest(games);
   const selection = opts.sel ? opts.sel(repertoire.id, forest) : fullSelection(repertoire.id);
   const config = { ...defaultConfig(opts.mode ?? 'full', [selection]), ...opts.config };
@@ -73,8 +86,6 @@ describe('moteur de révision — validation des coups', () => {
     expect(fb.title).toContain(PAUL);
     expect(fb.message).toBe('Tu as joué 1.d4, mais ton répertoire prévoit 1.e4.');
     expect(fb.expected!.map((e) => e.label)).toEqual(['1.e4']);
-    expect(fb.referenceLine).toMatch(/1\.\.\.e5/);
-    expect(fb.priorityNote).toMatch(/prioritaires/);
     expect(r.state.stats.errors).toBe(1);
     expect(r.effects.some((e) => e.type === 'grade' && e.grade === 1)).toBe(true);
   });
@@ -91,7 +102,7 @@ describe('moteur de révision — validation des coups', () => {
 
   it('distingue légal, répertoire et sélection : coup hors sélection non pénalisé', () => {
     const s = setup('1. e4 e5 2. Nf3 (2. Bc4 Nf6) Nc6 *', {
-      config: { color: 'w' },
+      color: 'w',
       sel: (id, forest) => {
         const bc4 = [...forest.byKey.values()].find((n) => n.san === 'Bc4')!;
         return toggleSubtree(fullSelection(id), bc4.key, false);
@@ -108,7 +119,7 @@ describe('moteur de révision — validation des coups', () => {
   });
 
   it('accepte une variante alternative sélectionnée et suit la branche compatible', () => {
-    const s = setup('[Event "R"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3) Nc6 3. Bb5 *', { config: { order: 'sequential', color: 'w' } });
+    const s = setup('[Event "R"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3) Nc6 3. Bb5 *', { color: 'w' });
     let r = play(s.deps, s, 'e4');
     r = play(s.deps, r, 'Bc4');
     expect(r.state.stats.correct).toBe(2);
@@ -117,15 +128,6 @@ describe('moteur de révision — validation des coups', () => {
     r = play(s.deps, r, 'd3');
     expect(r.state.phase).toBe('itemDone');
     expect(r.state.completedLines).toHaveLength(1);
-  });
-
-  it('en mode strict, une autre variante sélectionnée est refusée sans pénalité', () => {
-    const s = setup('1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3) Nc6 3. Bb5 *', { mode: 'line', config: { color: 'w' } });
-    let r = play(s.deps, s, 'e4');
-    r = play(s.deps, r, 'Bc4');
-    expect(r.state.feedback!.kind).toBe('alternative');
-    expect(r.state.stats.errors).toBe(0);
-    expect(r.state.phase).toBe('question');
   });
 
   it('ne révise pas une variante non sélectionnée', () => {
@@ -144,7 +146,7 @@ describe('moteur de révision — validation des coups', () => {
 
   it('accepte une transposition : plusieurs branches compatibles avec la même position', () => {
     const pgn = '[Event "A"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n\n[Event "B"]\n\n1. Nf3 c5 2. e4 d6 3. c3 *';
-    const s = setup(pgn, { mode: 'blind', config: { order: 'sequential', color: 'w' } });
+    const s = setup(pgn, { mode: 'smart', color: 'w', config: { newLimit: 20 } });
     // Position après 1.e4 c5 2.Cf3 d6 ou 1.Cf3 c5 2.e4 d6 : 3.d4 et 3.c3 sont tous deux corrects.
     const target = s.state.queue.findIndex((q) => q.kind === 'position' && s.deps.ctx.reps.get(q.repertoireId)!.index.get(q.posKey)!.moves.some((m) => m.san === 'c3'));
     expect(target).toBeGreaterThanOrEqual(0);
@@ -167,8 +169,8 @@ describe('moteur de révision — validation des coups', () => {
     expect(r.state.phase).toBe('itemDone');
   });
 
-  it('inverse les couleurs : un répertoire blanc révisé côté Noirs', () => {
-    const s = setup(WHITE_REP, { config: { color: 'b', order: 'sequential' } });
+  it('un répertoire blanc marqué « je joue les Noirs » est révisé côté Noirs', () => {
+    const s = setup(WHITE_REP, { color: 'b' });
     expect(currentFen(s.state)).toContain(' b ');
     const q = questionInfo(s.state, s.deps)!;
     expect(q.accepted.map((m) => m.san).sort()).toEqual(['c5', 'e5']);
@@ -199,27 +201,58 @@ describe('moteur de révision — validation des coups', () => {
     expect(r.state.item!.moves.map((m) => m.san)).toEqual(['e4', 'e5']);
   });
 
-  it('seconde tentative sans solution, puis note « Difficile » si l’erreur ne compte pas comme échec', () => {
-    const s = setup(WHITE_REP, { config: { onError: { retry: true, revealAfter: 1, stopLine: false, countAsFailure: false } } });
+  it('second essai : la solution n’est montrée qu’après la deuxième erreur', () => {
+    const s = setup(WHITE_REP, { config: { secondChance: true } });
     let r = play(s.deps, s, 'd4');
     expect(r.state.feedback!.expected).toBeUndefined();
     expect(r.state.feedback!.title).toContain(PAUL);
-    expect(r.state.feedback!.message).toMatch(/Encore 1 essai/);
+    expect(r.state.feedback!.message).toMatch(/Encore un essai/);
+    expect(r.state.feedback!.message).not.toMatch(/e4/);
+    expect(r.effects.some((e) => e.type === 'grade' && e.grade === 1)).toBe(true);
     r = { state: retry(r.state, 2500), effects: [] };
-    r = play(s.deps, r, 'e4', 3000);
-    expect(r.effects.some((e) => e.type === 'grade' && e.grade === 2)).toBe(true);
+    r = play(s.deps, r, 'd3', 3000);
+    expect(r.state.feedback!.expected!.map((e) => e.label)).toEqual(['1.e4']);
+    // Une seule entrée de journal et une seule note pour la question.
+    expect(r.effects.filter((e) => e.type === 'grade' || e.type === 'log')).toHaveLength(0);
   });
 
-  it('« Poursuivre » joue le coup attendu ; « Interrompre la ligne » termine la ligne', () => {
+  it('« Poursuivre » joue le coup attendu et continue la ligne', () => {
     const s = setup(WHITE_REP);
-    let r = play(s.deps, s, 'd4');
+    const r = play(s.deps, s, 'd4');
     const c = continueAfterError(r.state, s.deps, 3000);
     const a = runAuto(c.state, s.deps, 3000);
     expect(a.state.item!.moves.map((m) => m.san)).toEqual(['e4', 'e5']);
-    const stop = setup(WHITE_REP, { config: { onError: { retry: true, revealAfter: 0, stopLine: true, countAsFailure: true } } });
-    r = play(stop.deps, stop, 'd4');
-    const c2 = continueAfterError(r.state, stop.deps, 3000);
-    expect(c2.state.phase).toBe('itemDone');
+    expect(a.state.phase).toBe('question');
+  });
+
+  it('pendant la question et la correction, rien ne dévoile la suite de la ligne', () => {
+    const s = setup('[Event "Chapitre 1 - 1.e4 e5 2.Cf3"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 *');
+    let r = play(s.deps, s, 'e4');
+    r = play(s.deps, r, 'd4');
+    const fb = r.state.feedback!;
+    expect(fb.kind).toBe('error');
+    // Le message nomme le coup attendu (2.Cf3), jamais les suivants (3.Fb5, 4.Fa4) ni le nom du chapitre.
+    const shown = JSON.stringify(fb);
+    expect(shown).not.toMatch(/Fb5|Bb5|Fa4|Ba4|Chapitre/);
+    expect(fb.severity!.text).not.toMatch(/Cf3|Nf3/);
+    // Le nom de la ligne n'est donné qu'une fois l'élément terminé (l'interface le masque avant).
+    expect(itemLabel(r.state, s.deps)).toMatch(/Chapitre 1/);
+  });
+
+  it('« Recommencer » rejoue la ligne terminée et redemande ses positions', () => {
+    const s = setup(WHITE_REP, { sel: (id, forest) => onlySubtrees(id, [[...forest.byKey.values()].find((n) => n.san === 'c5')!.key]) });
+    let r = play(s.deps, s, 'Nf3');
+    r = play(s.deps, r, 'd4');
+    expect(r.state.phase).toBe('itemDone');
+    const again = runAuto(restartItem(r.state, s.deps, 4000).state, s.deps, 4000);
+    expect(again.state.phase).toBe('question');
+    expect(again.state.cursor).toBe(0);
+    expect(again.state.item!.moves.map((m) => m.san)).toEqual(['e4', 'c5']);
+  });
+
+  it('limite les modes par lignes au nombre de lignes demandé', () => {
+    const s = setup(WHITE_REP, { config: { maxQuestions: 1 } });
+    expect(s.state.queue).toHaveLength(1);
   });
 
   it('solution révélée : comptée comme échec, pas comme réussite', () => {
@@ -230,14 +263,6 @@ describe('moteur de révision — validation des coups', () => {
     const r = play(s.deps, rv, 'e4');
     expect(r.state.stats.correct).toBe(0);
     expect(r.state.stats.revealed).toBe(1);
-  });
-
-  it('temps écoulé en test chronométré', () => {
-    const s = setup(WHITE_REP, { mode: 'timed' });
-    const t = timeout(s.state, s.deps, 20000);
-    expect(t.state.feedback!.kind).toBe('timeout');
-    expect(logs(t.effects)[0].result).toBe('timeout');
-    expect(t.state.stats.timeouts).toBe(1);
   });
 
   it('apprentissage guidé : montre le coup puis le fait rejouer, sans compter de réussite', () => {
@@ -281,16 +306,6 @@ describe('moteur de révision — validation des coups', () => {
     // Le contexte (1.e4 c5 2.Cf3 d6) est rejoué avant la question.
     expect(s.state.item!.moves.map((m) => m.san)).toEqual(['e4', 'c5', 'Nf3', 'd6']);
   });
-
-  it('entraînement libre : vérifie chaque coup et répond avec le répertoire', () => {
-    const s = setup(WHITE_REP, { mode: 'free' });
-    expect(s.state.phase).toBe('question');
-    let r = play(s.deps, s, 'e4');
-    expect(r.state.item!.moves.length).toBe(2);
-    expect(['e5', 'c5']).toContain(r.state.item!.moves[1].san);
-    r = play(s.deps, r, 'h4');
-    expect(r.state.feedback!.title).toContain(PAUL);
-  });
 });
 
 describe('moteur de révision — PGN réel du dépôt', () => {
@@ -298,7 +313,6 @@ describe('moteur de révision — PGN réel du dépôt', () => {
 
   it('révise une variante précise du PGN (Chapitre 4 : 7...Fe7) avec les Blancs', () => {
     const s = setup(text, {
-      config: { order: 'sequential' },
       sel: (id, forest) => {
         let n = forest.roots[0];
         for (const san of ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6', 'f4', 'e5', 'Nb3', 'Be7']) n = n.children.find((c) => c.san === san)!;
@@ -314,7 +328,7 @@ describe('moteur de révision — PGN réel du dépôt', () => {
     r = play(s.deps, r, 'Qd2');
     expect(r.state.feedback!.kind).toBe('error');
     expect(r.state.feedback!.message).toContain('9.Dxd8+');
-    expect(r.state.feedback!.variationName).toMatch(/Chapter 4/);
+    expect(r.state.mistakes[0].label).toMatch(/Chapter 4/);
   });
 
   it('construit une session complète sur les 44 chapitres', () => {

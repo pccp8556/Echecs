@@ -5,48 +5,40 @@ import {
   BarChart3,
   BookMarked,
   Download,
-  FileText,
   GitBranch,
   History,
   List,
   ListTree,
-  Network,
   Pencil,
   Play,
   RefreshCw,
-  Save,
   Search,
-  Star,
   Library as LibraryIcon,
   NotebookPen,
-  Heart,
 } from 'lucide-react';
 import { useRepertoire, masterySummary, userPositionKeys } from '../state/derived';
 import { useLibrary } from '../state/library';
 import { useSettings } from '../state/settings';
 import { useSelections } from '../state/selections';
-import { leafCounts, mergedPath, type MergedNode } from '../core/repertoire/merged';
+import { leafCounts, mergedPath } from '../core/repertoire/merged';
 import { countSelection, fullSelection, onlySubtrees, resolveSelection, staleRules, toggleSubtree, type RepertoireSelection } from '../core/repertoire/selection';
 import { repertoireColor, type LineMark } from '../core/repertoire/types';
 import { exportRepertoirePgn, safeFileName } from '../core/repertoire/export';
 import { gameLabelFromHeaders } from '../core/pgn/parse';
 import { normalizeFen, positionKey, sideToMove } from '../core/chess/fen';
 import { formatLine } from '../core/chess/notation';
-import { defaultConfig } from '../core/review/presets';
 import { cardId, masteryOf, MASTERY_LABELS, formatInterval, type ReviewCard } from '../core/srs/srs';
-import { savePreset } from '../storage/repo';
-import { newId } from '../core/repertoire/build';
-import { ColorDot, EmptyState, Loading, MasteryBar, MasteryLegend, Modal, Tabs, downloadText, formatRelative, pct, promptDialog, toast } from '../ui/kit';
-import { PageHeader, startSessionAndGo } from './common';
+import { ColorDot, EmptyState, Loading, MasteryBar, MasteryLegend, Tabs, downloadText, formatRelative, pct, promptDialog, toast } from '../ui/kit';
+import { PageHeader, sessionConfig, startSessionAndGo } from './common';
 import { ExplorerBoard, type OffBook } from './repertoire/ExplorerBoard';
 import { TreeView, type TreeCtx } from './repertoire/TreeView';
-import { ChaptersView, CompareView, GraphView, HistoryView, LinesView } from './repertoire/Views';
+import { ChaptersView, HistoryView, LinesView } from './repertoire/Views';
 import { IssuesList, ReportStatsGrid } from './ImportReport';
 import { reloadFromSource } from './reloadSource';
 import { sequenceNodes } from '../core/repertoire/search';
 import { useReview } from '../state/review';
 
-type View = 'tree' | 'lines' | 'graph' | 'chapters' | 'report' | 'history';
+type View = 'tree' | 'lines' | 'chapters' | 'report' | 'history';
 
 export default function RepertoirePage() {
   const { id } = useParams();
@@ -61,7 +53,6 @@ export default function RepertoirePage() {
   const [flip, setFlip] = useState(false);
   const [offBook, setOffBook] = useState<OffBook | null>(null);
   const [rootIdx, setRootIdx] = useState(0);
-  const [compare, setCompare] = useState<MergedNode | null>(null);
   const [search, setSearch] = useState('');
   const [now] = useState(() => Date.now());
 
@@ -138,8 +129,7 @@ export default function RepertoirePage() {
   const setSelection = (s: RepertoireSelection) => selStore.set(s);
   const onToggle = (key: string, include: boolean) => setSelection(toggleSubtree(selection, key, include));
   const onMark = (key: string, mark: LineMark | null) => lib.setMark(rep.id, key, mark);
-  const reviewKeys = (keys: string[]) =>
-    startSessionAndGo({ ...defaultConfig('full', [onlySubtrees(rep.id, keys)]), onError: settings.errorPolicy, askConfidence: settings.askConfidence }, navigate);
+  const reviewKeys = (keys: string[]) => startSessionAndGo(sessionConfig('full', [onlySubtrees(rep.id, keys)]), navigate);
 
   const ctx: TreeCtx = {
     forest,
@@ -156,7 +146,6 @@ export default function RepertoirePage() {
     onToggle,
     onMark,
     onReview: (k) => reviewKeys([k]),
-    onCompare: (k) => setCompare(forest.byKey.get(k) ?? null),
   };
 
   const orientation = flip ? (color === 'w' ? 'b' : 'w') : color;
@@ -164,36 +153,19 @@ export default function RepertoirePage() {
   const curCard = cards.get(cardId(rep.id, current.posKey));
   const isUserPos = curTurn === color && current.children.length > 0 && !offBook;
 
-  const exportPgn = (selectionOnly: boolean) => {
+  const exportPgn = () => {
     const notes = new Map([...cards.values()].filter((c) => c.repertoireId === rep.id && c.note).map((c) => [c.posKey, c.note!]));
-    const keep = selectionOnly ? res.relevant : undefined;
-    downloadText(safeFileName(selectionOnly ? `${rep.name} - sélection` : rep.name), exportRepertoirePgn(rep, games, { annotations: true, notes, keep }));
+    downloadText(safeFileName(rep.name), exportRepertoirePgn(rep, games, { annotations: true, notes }));
     toast.success('PGN exporté');
-  };
-
-  const saveSelection = async () => {
-    const name = await promptDialog({ title: 'Enregistrer la sélection', label: 'Nom de la session réutilisable', defaultValue: `${rep.name} — sélection` });
-    if (!name) return;
-    const t = Date.now();
-    await savePreset({ id: newId(), name, config: { ...defaultConfig('smart', [selection]), presetName: name }, createdAt: t, updatedAt: t });
-    toast.success('Sélection enregistrée', 'Retrouve-la dans « Réviser » parmi tes sessions enregistrées.');
   };
 
   return (
     <div className="page page-wide">
       <PageHeader
         eyebrow="Répertoire"
-        title={
-          <span className="row" style={{ gap: 12 }}>
-            {rep.name}
-            {rep.favorite && <Star className="text-gold" size={22} aria-label="Favori" />}
-          </span>
-        }
+        title={rep.name}
         actions={
           <>
-            <button className="btn" onClick={() => lib.updateMeta(rep.id, { favorite: !rep.favorite })} aria-pressed={rep.favorite}>
-              <Star /> {rep.favorite ? 'Favori' : 'Favori'}
-            </button>
             <button
               className="btn"
               onClick={async () => {
@@ -203,7 +175,7 @@ export default function RepertoirePage() {
             >
               <RefreshCw /> Recharger
             </button>
-            <button className="btn" onClick={() => exportPgn(false)}>
+            <button className="btn" onClick={exportPgn}>
               <Download /> Exporter
             </button>
             <Link className="btn" to={`/repertoire/${rep.id}/editer`}>
@@ -220,14 +192,10 @@ export default function RepertoirePage() {
             <ColorDot color={color} /> Je joue les {color === 'w' ? 'Blancs' : 'Noirs'}
             {rep.color === 'auto' ? ' (détecté)' : ''}
           </span>
-          <span className="badge">{rep.stats.games} parties</span>
           <span className="badge">{rep.stats.lines} lignes</span>
-          <span className="badge">{rep.stats.positions} positions</span>
-          <span className="badge">{rep.stats.comments} commentaires</span>
           {rep.stats.errors > 0 && <span className="badge badge-danger">{rep.stats.errors} erreurs d’import</span>}
           {rep.source.kind === 'demo' && <span className="badge badge-violet">Démonstration</span>}
           {rep.modified && <span className="badge badge-info">modifié dans l’application</span>}
-          <span className="badge">révisé {formatRelative(rep.lastReviewedAt)}</span>
         </span>
       </PageHeader>
 
@@ -273,12 +241,6 @@ export default function RepertoirePage() {
               <button className="btn btn-sm btn-ghost" onClick={() => setSelection({ ...fullSelection(rep.id), defaultInclude: false })}>
                 Rien
               </button>
-              <button className="btn btn-sm" onClick={saveSelection}>
-                <Save /> Enregistrer
-              </button>
-              <button className="btn btn-sm" onClick={() => exportPgn(true)}>
-                <FileText /> PGN de la sélection
-              </button>
             </div>
           </div>
           {stale.length > 0 && (
@@ -319,13 +281,12 @@ export default function RepertoirePage() {
             tabs={[
               { value: 'tree', label: 'Arbre', icon: <ListTree /> },
               { value: 'lines', label: 'Lignes', icon: <List />, count: rep.stats.lines },
-              { value: 'graph', label: 'Graphe', icon: <Network /> },
               { value: 'chapters', label: 'Chapitres', icon: <BookMarked />, count: rep.stats.games },
               { value: 'report', label: 'Rapport', icon: <GitBranch /> },
               { value: 'history', label: 'Historique', icon: <History /> },
             ]}
           />
-          {roots.length > 1 && (view === 'tree' || view === 'graph') && (
+          {roots.length > 1 && view === 'tree' && (
             <div className="row row-wrap small">
               <label htmlFor="root-pick" className="faint">
                 Point de départ
@@ -344,7 +305,6 @@ export default function RepertoirePage() {
             {view === 'lines' && (
               <LinesView forest={forest} res={res} rep={rep} cards={cards} color={color} notation={settings.notation} marks={rep.marks} gameLabel={gameLabel} current={current.key} onNavigate={navigateTo} onToggle={onToggle} />
             )}
-            {view === 'graph' && <GraphView forest={forest} root={root} res={res} current={current.key} notation={settings.notation} onNavigate={navigateTo} />}
             {view === 'chapters' && <ChaptersView rep={rep} games={games} selection={selection} onSelection={setSelection} onNavigate={navigateTo} gameLabel={gameLabel} />}
             {view === 'report' && (
               <div className="stack">
@@ -362,12 +322,6 @@ export default function RepertoirePage() {
         </section>
       </div>
 
-      {compare && (
-        <Modal title="Comparer deux suites" onClose={() => setCompare(null)} wide>
-          <p className="muted small">Position après {formatLine(mergedPath(forest, compare.key).slice(1).map((n) => n.san), mergedPath(forest, compare.key)[0].fen, settings.notation) || 'le départ'}.</p>
-          <CompareView node={compare} notation={settings.notation} />
-        </Modal>
-      )}
     </div>
   );
 }
@@ -387,9 +341,6 @@ function PositionCard({ cardIdStr, card, now }: { cardIdStr: string; card: Revie
           : 'Pas encore révisée.'}
       </div>
       <div className="row row-wrap">
-        <button className="btn btn-sm" aria-pressed={!!card?.favorite} onClick={() => update(cardIdStr, (c) => ({ ...c, favorite: !c.favorite }))}>
-          <Heart /> {card?.favorite ? 'Favorite' : 'Mettre en favori'}
-        </button>
         <button
           className="btn btn-sm"
           onClick={async () => {

@@ -7,8 +7,8 @@ test('mobile : échiquier adapté à l’écran et coups au toucher', async ({ p
   await page.waitForURL(/\/repertoire\//);
   const id = page.url().split('/repertoire/')[1];
   await page.goto(`/session/nouvelle?rep=${id}`);
-  await page.getByRole('radio', { name: /Répertoire complet/ }).tap();
-  await page.getByRole('button', { name: 'Commencer' }).tap();
+  await page.getByRole('radio', { name: /Toute la sélection/ }).tap();
+  await page.getByRole('button', { name: /^Commencer/ }).tap();
   await page.waitForURL(/\/session\/(?!nouvelle)/);
   await waitForQuestion(page);
   const box = (await page.locator('.review-board .board').boundingBox())!;

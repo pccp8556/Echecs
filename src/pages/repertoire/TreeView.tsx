@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, MessageSquare, MoreHorizontal, Shuffle, Play, Columns2, Flag } from 'lucide-react';
+import { ChevronDown, ChevronRight, MessageSquare, MoreHorizontal, Shuffle, Play, Flag } from 'lucide-react';
 import type { MergedForest, MergedNode } from '../../core/repertoire/merged';
 import { mergedPath } from '../../core/repertoire/merged';
 import { checkState, type ResolvedSelection } from '../../core/repertoire/selection';
@@ -24,7 +24,6 @@ export interface TreeCtx {
   onToggle: (key: string, include: boolean) => void;
   onMark: (key: string, mark: LineMark | null) => void;
   onReview: (key: string) => void;
-  onCompare: (key: string) => void;
 }
 
 export function segmentFrom(node: MergedNode): MergedNode[] {
@@ -137,37 +136,24 @@ const Row = memo(function Row({ head, ctx, depth, expanded, toggleExpand }: { he
                 >
                   <Play /> Réviser cette variante
                 </button>
-                {tail.children.length > 1 && (
-                  <button
-                    onClick={() => {
-                      close();
-                      ctx.onCompare(tail.key);
-                    }}
-                  >
-                    <Columns2 /> Comparer les suites
-                  </button>
-                )}
                 <hr />
-                {(Object.keys(LINE_MARKS) as LineMark[]).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      close();
-                      ctx.onMark(head.key, mark === m ? null : m);
-                    }}
-                  >
-                    <Flag /> {mark === m ? '✓ ' : ''}
-                    {LINE_MARKS[m].label}
-                  </button>
-                ))}
-                {mark && (
+                <button
+                  onClick={() => {
+                    close();
+                    ctx.onMark(head.key, mark === 'abandoned' ? null : 'abandoned');
+                  }}
+                  title={LINE_MARKS.abandoned.hint}
+                >
+                  <Flag /> {mark === 'abandoned' ? 'Réactiver la variante' : 'Abandonner la variante'}
+                </button>
+                {mark && mark !== 'abandoned' && (
                   <button
                     onClick={() => {
                       close();
                       ctx.onMark(head.key, null);
                     }}
                   >
-                    Retirer la marque
+                    Retirer la marque « {LINE_MARKS[mark].label} »
                   </button>
                 )}
               </>

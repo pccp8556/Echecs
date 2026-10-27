@@ -6,7 +6,7 @@ src/
     chess/              FEN, clés de position, notation (fr/en/figurines), NAG
     pgn/                découpage, analyse, arbre de coups, export
     repertoire/         modèle, arbre fusionné, positions, sélection, lignes, recherche, export annoté
-    review/             moteur de révision (machine à états), retours, préréglages
+    review/             moteur de révision (machine à états), retours, configuration des sessions
     srs/                répétition espacée FSRS (ts-fsrs), niveaux de maîtrise, priorités
     stats/              agrégations sur le journal des réponses
   storage/              IndexedDB (idb) : dépôt, corbeille, versions, sauvegarde complète
@@ -33,12 +33,14 @@ Machine à états pure et sérialisable (`core/review/engine.ts`) : `auto` (coup
 
 Validation d’un coup, dans l’ordre :
 1. illégal → refusé, aucune pénalité ;
-2. dans les coups acceptés → correct (si c’est une autre variante sélectionnée, le moteur **suit une ligne compatible**, ou la refuse sans pénalité en mode strict/principal) ;
+2. dans les coups sélectionnés depuis cette position → correct (si c’est une autre variante sélectionnée, le moteur **suit une ligne compatible**) ;
 3. dans le répertoire mais hors sélection → information, aucune pénalité ;
 4. aucun coup de référence → information ;
 5. sinon → **erreur de répertoire** : « Paul aurait trouvé ».
 
-Une seule entrée de journal par question (première résolution) ; la note FSRS est appliquée une fois, corrigeable par l’utilisateur (À revoir / Difficile / Bien / Facile).
+Une seule entrée de journal par question (première résolution) ; la note FSRS est appliquée une fois (À revoir / Difficile / Bien / Facile, choisie par l’utilisateur s’il l’a demandé).
+
+Quatre modes : révision du jour et erreurs (par positions), apprendre et toute la sélection (par lignes). Une position déjà réussie dans la session n’est pas redemandée quand plusieurs lignes partagent le même début. Pendant une question, l’interface ne montre ni le nom de la ligne ni celui du chapitre, et le retour d’erreur ne donne que le coup attendu (pas la suite de la ligne).
 
 Gravité d’une erreur : nombre de lignes de la sélection qui passent par le coup attendu, ou oubli d’une position déjà connue. Aucune évaluation échiquéenne n’est inventée : l’explication vient du commentaire du PGN, sinon un message neutre.
 

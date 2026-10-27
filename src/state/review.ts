@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as engine from '../core/review/engine';
 import type { EngineDeps, EngineResult, MoveInput } from '../core/review/engine';
 import { buildSessionContext } from '../core/review/context';
-import type { Effect, SessionConfig, SessionState } from '../core/review/types';
+import { isReviewMode, type Effect, type SessionConfig, type SessionState } from '../core/review/types';
 import { answersSignature } from '../core/repertoire/positions';
 import { newCard, type Grade4, type ReviewCard } from '../core/srs/srs';
 import { sideToMove } from '../core/chess/fen';
@@ -21,10 +21,6 @@ type Action =
   | { type: 'confirm'; grade?: Grade4 }
   | { type: 'next' }
   | { type: 'restart' }
-  | { type: 'skip' }
-  | { type: 'timeout' }
-  | { type: 'takeBack' }
-  | { type: 'rate'; cardId: string; grade: Grade4 }
   | { type: 'end' };
 
 interface LastGrade {
@@ -40,8 +36,6 @@ interface ReviewStore {
   error?: string;
   lastIllegal: number;
   lastError: number;
-  /** Dernière bonne réponse notée automatiquement (peut être corrigée par l'utilisateur). */
-  lastGraded?: { cardId: string; grade: Grade4; at: number };
   start: (config: SessionConfig) => Promise<string>;
   resume: (id: string) => Promise<void>;
   act: (a: Action) => void;
@@ -80,8 +74,7 @@ async function buildDeps(config: SessionConfig): Promise<EngineDeps> {
     cards: new Map(useLibrary.getState().cards),
     style: s.feedbackStyle,
     notation: s.notation,
-    slowMs: s.slowMs,
-    fastMs: s.fastMs,
+    ...engine.ANSWER_TIMING,
   };
 }
 
@@ -113,8 +106,6 @@ function applyEffects(effects: Effect[], deps: EngineDeps) {
           lastGrade = { cardId: e.cardId, before, request: req };
           deps.cards.set(after.id, after);
           useLibrary.getState().setCards([after]);
-          if (e.result === 'correct') useReview.setState({ lastGraded: { cardId: e.cardId, grade: e.grade, at: Date.now() } });
-          else useReview.setState({ lastGraded: undefined });
         } else if (e.type === 'regrade') {
           if (!lastGrade || lastGrade.cardId !== e.cardId) continue;
           const lg = lastGrade;
@@ -129,8 +120,6 @@ function applyEffects(effects: Effect[], deps: EngineDeps) {
           await repo.putCards([withConfidence]);
           deps.cards.set(withConfidence.id, withConfidence);
           useLibrary.getState().setCards([withConfidence]);
-          const lgNow = useReview.getState().lastGraded;
-          if (lgNow?.cardId === e.cardId) useReview.setState({ lastGraded: { ...lgNow, grade: e.grade } });
         } else if (e.type === 'touchRepertoire') {
           await useLibrary.getState().updateMeta(e.repertoireId, { lastReviewedAt: Date.now() });
         }
@@ -165,6 +154,7 @@ export const useReview = create<ReviewStore>((set, get) => ({
     try {
       const s = await repo.getSession(id);
       if (!s) throw new Error('Session introuvable : elle a peut-être été supprimée.');
+      if (!isReviewMode(s.config.mode)) throw new Error('Cette session utilise un mode de révision qui n’existe plus. Lance une nouvelle session.');
       const deps = await buildDeps(s.config);
       let state = s;
       // Si le répertoire a changé depuis, on repart de l'élément courant.
@@ -212,20 +202,8 @@ export const useReview = create<ReviewStore>((set, get) => ({
       case 'restart':
         r = engine.restartItem(session, deps, now);
         break;
-      case 'skip':
-        r = engine.skipItem(session, deps, now);
-        break;
-      case 'timeout':
-        r = engine.timeout(session, deps, now);
-        break;
-      case 'takeBack':
-        r = { state: engine.takeBack(session, deps, now), effects: [] };
-        break;
       case 'end':
         r = { state: engine.endSession(session, now), effects: [] };
-        break;
-      case 'rate':
-        r = { state: session, effects: session.config.graded ? [{ type: 'regrade', cardId: a.cardId, grade: a.grade }] : [] };
         break;
     }
     applyEffects(r.effects, deps);

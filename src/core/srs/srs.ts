@@ -59,13 +59,8 @@ export function cardId(repertoireId: string, posKey: string): string {
   return `${repertoireId}|${posKey}`;
 }
 
-let scheduler = fsrs(generatorParameters({ enable_fuzz: false, request_retention: 0.9, maximum_interval: 3650 }));
-
-export function configureScheduler(opts: { retention?: number; maxIntervalDays?: number }) {
-  scheduler = fsrs(
-    generatorParameters({ enable_fuzz: false, request_retention: opts.retention ?? 0.9, maximum_interval: opts.maxIntervalDays ?? 3650 }),
-  );
-}
+/** Rétention visée 90 %, intervalles plafonnés à 10 ans. */
+const scheduler = fsrs(generatorParameters({ enable_fuzz: false, request_retention: 0.9, maximum_interval: 3650 }));
 
 function toStored(c: Card): StoredFsrs {
   return {
